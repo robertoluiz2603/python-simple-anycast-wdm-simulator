@@ -20,3 +20,15 @@ def arrival(env: 'Environment', service: 'Service'):
 
 def departure(env: 'Environment', service: 'Service'):
     env.release_path(service)
+
+#link como parametro
+def failure_arrival(env: 'Environment', service: 'Service'):
+
+    path = env.policy.route(service)
+    service.route = path
+    
+    env.setup_next_failure
+
+def failure_departure(env: 'Environment', service: 'Service'):
+    #Restaurar o link
+    pass

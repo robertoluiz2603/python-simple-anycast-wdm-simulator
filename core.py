@@ -258,6 +258,47 @@ class Environment:
             self._update_link_stats(service.route.node_list[i], service.route.node_list[i + 1])
         self._update_network_stats()
 
+    def setup_next_failure (self):
+        """
+        Returns the next arrival to be scheduled in the simulator
+        """
+        if self._processed_arrivals > self.num_arrivals:
+            return  # returns None when all arrivals have been processed
+        at = self.current_time + self.rng.expovariate(1 / self.mean_service_inter_arrival_time)
+        ht = self.rng.expovariate(1 / self.mean_service_holding_time)
+        src = self.rng.choice([x for x in self.topology.graph['source_nodes']])
+        src_id = self.topology.graph['node_indices'].index(src)
+
+        self._processed_arrivals += 1
+
+        if self._processed_arrivals % self.track_stats_every == 0:
+            self.tracked_results['request_blocking_ratio'].append(self.get_request_blocking_ratio())
+            self.tracked_results['average_link_usage']\
+                .append(np.mean([
+                    (self.topology[n1][n2]['total_units'] - self.topology[n1][n2]['available_units'])
+                    / self.topology[n1][n2]['total_units'] for n1, n2 in self.topology.edges()
+                ]))
+            self.tracked_results['average_node_usage'].append(np.mean([(self.topology.nodes[node]['total_units'] -
+                                                                        self.topology.nodes[node]['available_units']) /
+                                                                       self.topology.nodes[node]['total_units'] for node
+                                                                       in self.topology.graph['dcs']]))
+        if self._processed_arrivals % self.plot_tracked_stats_every == 0:
+            plots.plot_simulation_progress(self)
+
+        failure = Service(self._processed_arrivals, at, ht, src, src_id, network_units=1, computing_units=1)
+        self.add_event(Event(failure.arrival_time, events.arrival, failure))
+
+        save_connections(self, failure)
+
+        self.topology.nodes
+        self.add_event(Event(failure.arrival_time + failure.holding_time, events.failure_departure, failure))
+
+        
+    def save_connections(self, service):
+        #Search in self.events events that need to be rerouted
+        #"next arrival" the saved events
+        self.add_event(Event(service.arrival_time + service.holding_time, events.failure_departure, service))
+        
     def _update_link_stats(self, node1, node2):
         """
         Updates link statistics following a time-weighted manner.
@@ -335,7 +376,6 @@ class Service:
         self.computing_units = computing_units  # number of CPUs required at the DC
         self.route = None  # route to be followed
         self.provisioned = False  # whether the service was provisioned or not
-
 
 class Event:
     """
