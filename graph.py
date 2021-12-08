@@ -72,7 +72,8 @@ def read_sndlib_topology(file):
 
             weight = 1.0
             graph.add_edge(source.childNodes[0].data, target.childNodes[0].data,
-                           id=link.getAttribute("id"), weight=weight, length=length, index=idx)
+                           id=link.getAttribute("id"), weight=weight, length=length, index=idx,
+                           failed=False)
     graph.graph["node_indices"] = []
     for idx, node in enumerate(graph.nodes()):
         graph.graph["node_indices"].append(node)

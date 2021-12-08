@@ -37,7 +37,7 @@ class ClosestAvailableDC(RoutingPolicy):
             if self.env.topology.nodes[dc]['available_units'] >= service.computing_units:
                 paths = self.env.topology.graph['ksp'][service.source, dc]
                 for idp, path in enumerate(paths):
-                    if is_path_free(self.env.topology, path, service.network_units) and closest_path_hops > path.hops:
+                    if is_path_free_and_available(self.env.topology, path, service.network_units) and closest_path_hops > path.hops:
                         closest_path_hops = path.hops
                         closest_dc = dc
                         closest_path = path
@@ -63,7 +63,7 @@ class FarthestAvailableDC(RoutingPolicy):
             if self.env.topology.nodes[dc]['available_units'] >= service.computing_units:
                 paths = self.env.topology.graph['ksp'][service.source, dc]
                 for idp, path in enumerate(paths):
-                    if is_path_free(self.env.topology, path, service.network_units) and farthest_path_hops < path.hops:
+                    if is_path_free_and_available(self.env.topology, path, service.network_units) and farthest_path_hops < path.hops:
                         farthest_path_hops = path.hops
                         farthest_dc = dc
                         farthest_path = path
@@ -92,7 +92,7 @@ class FullLoadBalancing(RoutingPolicy):
                     load = (get_max_usage(self.env.topology, path) / self.env.resource_units_per_link) * \
                            ((self.env.topology.nodes[dc]['total_units'] - self.env.topology.nodes[dc]['available_units']) /
                             self.env.topology.nodes[dc]['total_units'])
-                    if is_path_free(self.env.topology, path, service.network_units) and load < lowest_load:
+                    if is_path_free_and_available(self.env.topology, path, service.network_units) and load < lowest_load:
                         lowest_load = load
                         closest_dc = dc
                         closest_path = path
@@ -100,9 +100,10 @@ class FullLoadBalancing(RoutingPolicy):
         return found, closest_dc, closest_path  # returns false and an index out of bounds if no path is available
 
 
-def is_path_free(topology: 'Graph', path: 'Path', number_units: int) -> bool:
+def is_path_free_and_available(topology: 'Graph', path: 'Path', number_units: int) -> bool:
     for i in range(len(path.node_list) - 1):
-        if topology[path.node_list[i]][path.node_list[i + 1]]['available_units'] < number_units:
+        if topology[path.node_list[i]][path.node_list[i + 1]]['failed'] \
+            or topology[path.node_list[i]][path.node_list[i + 1]]['available_units'] < number_units:
             return False
     return True
 

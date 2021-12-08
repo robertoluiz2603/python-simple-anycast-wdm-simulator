@@ -2,16 +2,20 @@ import logging
 import random
 import heapq
 import multiprocessing
+from typing import Sequence
 import numpy as np
 
 import events
 import plots
 import routing_policies
+import restoration_policies
 
 
 class Environment:
 
-    def __init__(self, args=None, topology=None, results=None, seed=None, load=None, policy=None, id_simulation=None,
+    def __init__(self, args=None, topology=None, results=None, seed=None, load=None, 
+                 routing_policy=None, id_simulation=None,
+                 restoration_policy=None,
                  output_folder=None):
 
         if args is not None and hasattr(args, 'mean_service_holding_time'):
@@ -20,6 +24,11 @@ class Environment:
             self.mean_service_holding_time: float = 86400.0  # service holding time in seconds (54000 sec = 15 h)
 
         self.load: float = 0.0
+
+        # TODO: implementar obtencao do valor a partir do args
+        self.mean_failure_inter_arrival_time: float = 100.
+        self.mean_failure_duration: float = 86400.0
+
         self.mean_service_inter_arrival_time: float = 0.0
         if args is not None and hasattr(args, 'load') and load is None:
             self.set_load(load=args.load)
@@ -71,11 +80,17 @@ class Environment:
         if args is not None and hasattr(args, "resource_units_per_link"):
             self.resource_units_per_link = args.resource_units_per_link
 
-        self.policy: routing_policies.RoutingPolicy = routing_policies.ClosestAvailableDC()  # closest DC by default
-        self.policy.env = self
-        if policy is not None:
-            self.policy = policy  # parameter has precedence over argument
-            self.policy.env = self
+        self.routing_policy: routing_policies.RoutingPolicy = routing_policies.ClosestAvailableDC()  # closest DC by default
+        self.routing_policy.env = self
+        if routing_policy is not None:
+            self.routing_policy = routing_policy  # parameter has precedence over argument
+            self.routing_policy.env = self
+        
+        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.OldestFirst()
+        self.restoration_policy.env = self
+        if restoration_policy is not None:
+            self.restoration_policy = restoration_policy
+            self.restoration_policy.env = self
 
         self.topology: Graph = None
         if topology is not None:
@@ -115,13 +130,15 @@ class Environment:
 
         self.plot_formats: tuple = ('pdf', 'svg')  # you can configure this to other formats such as PNG, SVG
 
+        self.logger = logging.getLogger(f'env-{self.load}')  # TODO: colocar outras informacoes necessarias
+
     def compute_simulation_stats(self):
         # run here the code to summarize statistics from this specific run
         if self.plot_simulation_progress:
             plots.plot_simulation_progress(self)
         # add here the code to include other statistics you may want
 
-        self.results[self.policy.name][self.load].append({
+        self.results[self.routing_policy.name][self.load].append({
             'request_blocking_ratio': self.get_request_blocking_ratio(),
             'average_link_usage': np.mean([self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()]),
             'individual_link_usage': [self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()],
@@ -168,6 +185,7 @@ class Environment:
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0
         self.setup_next_arrival()
+        self.setup_next_link_failure()
         
     def setup_next_arrival(self):
         """
@@ -217,6 +235,12 @@ class Environment:
         """
         # self.debug("time={}; event={}".format(event.time, event.call))
         heapq.heappush(self.events, (event.time, event))
+    
+    def remove_service_departure(self, service) -> None:
+        for event in self.events:
+            if event[1].params == service:
+                self.events.remove(event)
+                break
 
     def provision_service(self, service):
         service.destination = service.route.node_list[-1]
@@ -258,46 +282,22 @@ class Environment:
             self._update_link_stats(service.route.node_list[i], service.route.node_list[i + 1])
         self._update_network_stats()
 
-    def setup_next_failure (self):
+    def setup_next_link_failure(self):
         """
         Returns the next arrival to be scheduled in the simulator
         """
         if self._processed_arrivals > self.num_arrivals:
             return  # returns None when all arrivals have been processed
-        at = self.current_time + self.rng.expovariate(1 / self.mean_service_inter_arrival_time)
-        ht = self.rng.expovariate(1 / self.mean_service_holding_time)
-        src = self.rng.choice([x for x in self.topology.graph['source_nodes']])
-        src_id = self.topology.graph['node_indices'].index(src)
-
-        self._processed_arrivals += 1
-
-        if self._processed_arrivals % self.track_stats_every == 0:
-            self.tracked_results['request_blocking_ratio'].append(self.get_request_blocking_ratio())
-            self.tracked_results['average_link_usage']\
-                .append(np.mean([
-                    (self.topology[n1][n2]['total_units'] - self.topology[n1][n2]['available_units'])
-                    / self.topology[n1][n2]['total_units'] for n1, n2 in self.topology.edges()
-                ]))
-            self.tracked_results['average_node_usage'].append(np.mean([(self.topology.nodes[node]['total_units'] -
-                                                                        self.topology.nodes[node]['available_units']) /
-                                                                       self.topology.nodes[node]['total_units'] for node
-                                                                       in self.topology.graph['dcs']]))
-        if self._processed_arrivals % self.plot_tracked_stats_every == 0:
-            plots.plot_simulation_progress(self)
-
-        failure = Service(self._processed_arrivals, at, ht, src, src_id, network_units=1, computing_units=1)
-        self.add_event(Event(failure.arrival_time, events.arrival, failure))
-
-        save_connections(self, failure)
-
-        self.topology.nodes
-        self.add_event(Event(failure.arrival_time + failure.holding_time, events.failure_departure, failure))
-
         
-    def save_connections(self, service):
-        #Search in self.events events that need to be rerouted
-        #"next arrival" the saved events
-        self.add_event(Event(service.arrival_time + service.holding_time, events.failure_departure, service))
+        # TODO: qual distribuicao sera usada pras falhas?
+        at = self.current_time + self.rng.expovariate(1 / self.mean_failure_inter_arrival_time)
+        duration = self.rng.expovariate(1 / self.mean_failure_duration)
+
+        link = self.rng.choice([x for x in self.topology.edges()])
+
+        failure = LinkFailure(link, at, duration)
+
+        self.add_event(Event(failure.arrival_time, events.link_failure_arrival, failure))
         
     def _update_link_stats(self, node1, node2):
         """
@@ -343,11 +343,11 @@ def run_simulation(env: Environment):
     """
     logger = multiprocessing.log_to_stderr()
     logger.setLevel(logging.INFO)
-    logger.info(f'Running simulation for load {env.load} and policy {env.policy.name}')
+    logger.info(f'Running simulation for load {env.load} and policy {env.routing_policy.name}')
 
     for seed in range(env.num_seeds):
         env.reset(seed=env.seed + seed, id_simulation=seed)  # adds to the general seed
-        logger.info(f'Running simulation {seed} for policy {env.policy.name} and load {env.load}')
+        logger.info(f'Running simulation {seed} for policy {env.routing_policy.name} and load {env.load}')
         while len(env.events) > 0:
             event_tuple = heapq.heappop(env.events)
             time = event_tuple[0]
@@ -357,14 +357,14 @@ def run_simulation(env: Environment):
 
         env.compute_simulation_stats()
     # prepare observations
-    logger.info(f'Finishing simulation for load {env.load} and policy {env.policy.name}')
+    logger.info(f'Finishing simulation for load {env.load} and policy {env.routing_policy.name}')
 
 
 class Service:
     """"
     Class that defines one service in the system.
     """
-    def __init__(self, serv_id, at, ht, src, src_id, network_units=1, computing_units=1):
+    def __init__(self, serv_id, at, ht, src, src_id, network_units=1, computing_units=1) -> None:
         self.service_id = serv_id
         self.arrival_time = at
         self.holding_time = ht
@@ -376,6 +376,30 @@ class Service:
         self.computing_units = computing_units  # number of CPUs required at the DC
         self.route = None  # route to be followed
         self.provisioned = False  # whether the service was provisioned or not
+        self.failed = False
+    
+    def __repr__(self) -> str:
+        return f'<Service {self.service_id}, {self.source} -> {self.destination}>'
+    
+    def __eq__(self, other):
+        """Overrides the default implementation"""
+        if isinstance(other, Service):
+            return self.service_id == other.service_id
+        return False
+
+
+class LinkFailure:
+    def __init__(self, link: Sequence[str], at: float, duration: float) -> None:
+        self.link_to_fail = link
+        self.arrival_time = at
+        self.duration = duration
+
+
+class SRLGFailure:
+    def __init__(self, links: Sequence[Sequence[str]], at: float, duration: float) -> None:
+        # TODO: implement this method
+        pass
+
 
 class Event:
     """

@@ -15,6 +15,7 @@ import core
 import graph
 import plots
 import routing_policies
+import restoration_policies
 
 import logging
 logging.basicConfig(format='%(asctime)s\t%(name)-12s\t%(threadName)s\t%(message)s', level=logging.DEBUG)
@@ -70,12 +71,15 @@ def run(uargs):
     envs = []
     for policy in exec_policies: # runs the simulations for two policies
         for load in loads:
+            
+            restoration_policy_instance = restoration_policies.OldestFirst()
+
             if policy == 'CADC':
-                policy_instance = routing_policies.ClosestAvailableDC()
+                routing_policy_instance = routing_policies.ClosestAvailableDC()
             elif policy == 'FADC':
-                policy_instance = routing_policies.FarthestAvailableDC()
+                routing_policy_instance = routing_policies.FarthestAvailableDC()
             elif policy == 'FLB':
-                policy_instance = routing_policies.FullLoadBalancing()
+                routing_policy_instance = routing_policies.FullLoadBalancing()
             else:
                 raise ValueError('Policy was not configured correctly (value set to {})'.format(policy))
             env_topology = copy.deepcopy(topology) # makes a deep copy of the topology object
@@ -83,13 +87,14 @@ def run(uargs):
                                      topology=env_topology,
                                      results=results,
                                      load=load,
-                                     policy=policy_instance,
+                                     routing_policy=routing_policy_instance,
+                                     restoration_policy=restoration_policy_instance,
                                      seed=len(exec_policies) * load,
                                      output_folder=env.output_folder)
             envs.append(env_t)
             # code for debugging purposes -- it runs without multithreading
-            # if load == 400 and policy == 'CADC':
-            #     core.run_simulation(env_t)
+            if load == 400 and policy == 'CADC':
+                core.run_simulation(env_t)
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses
@@ -167,5 +172,6 @@ if __name__ == '__main__':
                         help='Time interval for plotting intermediate statistics of the simulation in seconds (default={})'.format(te))
     parser.add_argument('-o', '--output_folder', default=env.output_folder,
                         help='Output folder inside results (default={})'.format(env.output_folder))
+    # TODO: implementar argumentos pro failure inter arrival time e failure duration
     args = parser.parse_args()
     run(args)
