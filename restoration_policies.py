@@ -31,9 +31,10 @@ class OldestFirst(RestorationPolicy):
         # if a path is available, set the route, provision, set to working
 
         for service in services:
+            # here, we use the same routing policy as in the provisioning
             success, dc, path = self.env.routing_policy.route(service)
             if success:
                 service.route = path
                 service.failed = False
                 self.env.provision_service(service)
-            break  # TODO: remove
+            break  # TODO: remove this for a realistic scenario

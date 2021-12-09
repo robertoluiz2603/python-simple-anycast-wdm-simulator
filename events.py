@@ -1,11 +1,10 @@
-import copy
 from typing import Sequence
 import typing
 if typing.TYPE_CHECKING:  # avoid circular imports
     from core import Environment, Service, LinkFailure
 
 
-def arrival(env: 'Environment', service: 'Service'):
+def arrival(env: 'Environment', service: 'Service') -> None:
     # logging.debug('Processing arrival {} for policy {} load {} seed {}'
     #               .format(service.service_id, env.policy, env.load, env.seed))
 
@@ -20,19 +19,27 @@ def arrival(env: 'Environment', service: 'Service'):
     env.setup_next_arrival()  # schedules next arrival
 
 
-def departure(env: 'Environment', service: 'Service'):
+def departure(env: 'Environment', service: 'Service') -> None:
+    # computing the service time that can be later used to compute availability
+    service.service_time = env.current_time - service.arrival_time
+    service.availability = 1.0  # leaving due to service time, so 100% availability
     env.release_path(service)
 
 
-#link como parametro
-def link_failure_arrival(env: 'Environment', failure: 'LinkFailure'):
+def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
     from core import Event
+
+    # saving status
+    env.tracked_results['link_failure_arrivals'].append(env.current_time)
     
     # put the link in a failed state
     env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['failed'] = True
 
     # get the list of disrupted services
-    services_disrupted: Sequence[Service] = copy.deepcopy(env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['running_services'])
+    services_disrupted: Sequence[Service] = []  # create an empty list
+
+    # extend the list with the running services
+    services_disrupted.extend(env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['running_services'])
     number_disrupted_services: int = len(services_disrupted)
 
     env.logger.debug(f'Failure arrived at time: {env.current_time}\tLink: {failure.link_to_fail}\tfor {number_disrupted_services} services')
@@ -60,7 +67,10 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure'):
     number_restored_services: int = 0
     for service in services_disrupted:
         if service.failed:  # service could not be restored
-            pass
+            # computing the service time that can be later used to compute availability
+            service.service_time = env.current_time - service.arrival_time
+            # computing the availability <= 1.0
+            service.availability = service.service_time / service.holding_time
         
         else:  # service could be restored
             number_restored_services += 1
@@ -69,14 +79,20 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure'):
     # register statistics such as restorability
     if number_disrupted_services > 0:
         restorability = number_restored_services / number_disrupted_services
+        env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
+    # accummulating the totals in the environment object
+    env.number_disrupted_services += number_disrupted_services
+    env.number_restored_services += number_restored_services
 
-    # verificar servicoes rompidos por esta falha
     env.add_event(Event(env.current_time + failure.duration, link_failure_departure, failure))
 
 
-def link_failure_departure(env: 'Environment', failure: 'LinkFailure'):
+def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
     # in this case, only a single link failure is at the network at a given point in time
     env.logger.debug(f'Failure repaired at time: {env.current_time}\tLink: {failure.link_to_fail}')
+
+    # tracking departures
+    env.tracked_results['link_failure_departures'].append(env.current_time)
 
     # put the link back in a working state
     env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['failed'] = False

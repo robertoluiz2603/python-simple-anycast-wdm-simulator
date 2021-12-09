@@ -21,26 +21,47 @@ def plot_simulation_progress(env: 'Environment'):
     """
     Plots results for a particular configuration.
     """
-    plt.figure(figsize=(12, 4))
+    plt.figure(figsize=(12, 8))
 
-    plt.subplot(1, 3, 1)
+    plt.subplot(2, 3, 1)
     if any(i > 0 for i in env.tracked_results['request_blocking_ratio']):
         plt.semilogy([x * env.track_stats_every for x in range(1, len(env.tracked_results['request_blocking_ratio'])+1)],
                  env.tracked_results['request_blocking_ratio'])
     plt.xlabel('Arrival')
     plt.ylabel('Req. blocking ratio')
 
-    plt.subplot(1, 3, 2)
+    plt.subplot(2, 3, 2)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_link_usage'])+1)],
                  env.tracked_results['average_link_usage'])
     plt.xlabel('Arrival')
     plt.ylabel('Avg. link usage')
 
-    plt.subplot(1, 3, 3)
+    plt.subplot(2, 3, 3)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_node_usage']) + 1)],
              env.tracked_results['average_node_usage'])
     plt.xlabel('Arrival')
     plt.ylabel('Avg. node usage')
+
+    plt.subplot(2, 3, 4)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_availability'])+1)],
+                 env.tracked_results['average_availability'])
+    plt.xlabel('Arrival')
+    plt.ylabel('System avg. availability')
+
+    plt.subplot(2, 3, 5)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_restorability'])+1)],
+                 env.tracked_results['average_restorability'])
+    plt.xlabel('Arrival')
+    plt.ylabel('System avg. restorability')
+
+    plt.subplot(2, 3, 6)
+    plt.scatter(env.tracked_results['link_failure_arrivals'],
+                 np.full((1, len(env.tracked_results['link_failure_arrivals'])), fill_value=1), label='Arrival')
+    plt.scatter(env.tracked_results['link_failure_departures'],
+                 np.full((1, len(env.tracked_results['link_failure_departures'])), fill_value=0), label='Departure')
+    plt.xlabel('Arrival')
+    plt.ylabel('Failure events')
+    plt.legend()
 
     plt.tight_layout()
     # plt.show()

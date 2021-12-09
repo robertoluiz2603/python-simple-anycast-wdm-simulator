@@ -2,9 +2,11 @@ import logging
 import random
 import heapq
 import multiprocessing
-from typing import Sequence
+from typing import Any, Callable, List, Optional, Sequence
+from dataclasses import dataclass, field
 import numpy as np
 
+from graph import Path
 import events
 import plots
 import routing_policies
@@ -24,6 +26,14 @@ class Environment:
             self.mean_service_holding_time: float = 86400.0  # service holding time in seconds (54000 sec = 15 h)
 
         self.load: float = 0.0
+
+        # total number of services disrupted by failures
+        self.number_disrupted_services: int = 0
+        # total number of services restored from failures
+        self.number_restored_services: int = 0
+
+        # list with all services processed
+        self.services: Sequence[Service] = []
 
         # TODO: implementar obtencao do valor a partir do args
         self.mean_failure_inter_arrival_time: float = 100.
@@ -113,7 +123,8 @@ class Environment:
         self.track_stats_every: int = 100  # frequency at which results are saved
         self.plot_tracked_stats_every: int = 1000  # frequency at which results are plotted
         self.tracked_results: dict = {}
-        self.tracked_statistics: list = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage']
+        self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
+                                        'average_availability', 'average_restorability', 'link_failure_arrivals', 'link_failure_departures']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -136,6 +147,13 @@ class Environment:
         # run here the code to summarize statistics from this specific run
         if self.plot_simulation_progress:
             plots.plot_simulation_progress(self)
+        
+        total_service_time: float = 0.
+        total_holding_time: float = 0.
+        for service in self.services:
+            if service.provisioned:
+                total_service_time += service.service_time
+                total_holding_time += service.holding_time
         # add here the code to include other statistics you may want
 
         self.results[self.routing_policy.name][self.load].append({
@@ -143,7 +161,10 @@ class Environment:
             'average_link_usage': np.mean([self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()]),
             'individual_link_usage': [self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()],
             'average_node_usage': np.mean([self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']]),
-            'individual_node_usage': {node: self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']}
+            'individual_node_usage': {node: self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']},
+            # TODO: add statistics about failures
+            'restorability': self.number_restored_services / self.number_disrupted_services,
+            'availability': total_service_time / total_holding_time
         })
 
     def reset(self, seed=None, id_simulation=None):
@@ -151,6 +172,14 @@ class Environment:
         self._processed_arrivals = 0
         self._rejected_services = 0
         self.current_time = 0.0
+
+        # total number of services disrupted by failures
+        self.number_disrupted_services: int = 0
+        # total number of services restored from failures
+        self.number_restored_services: int = 0
+
+        # list with all services processed
+        self.services: Sequence[Service] = []
 
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
@@ -163,7 +192,6 @@ class Environment:
 
         # (re)-initialize the graph
         self.topology.graph['running_services'] = []
-        self.topology.graph['services'] = []
         for idx, lnk in enumerate(self.topology.edges()):
             self.topology[lnk[0]][lnk[1]]['available_units'] = self.resource_units_per_link
             self.topology[lnk[0]][lnk[1]]['total_units'] = self.resource_units_per_link
@@ -212,11 +240,28 @@ class Environment:
                                                                         self.topology.nodes[node]['available_units']) /
                                                                        self.topology.nodes[node]['total_units'] for node
                                                                        in self.topology.graph['dcs']]))
+            # failure-related stats
+            total_service_time: float = 0.
+            total_holding_time: float = 0.
+            for service in self.services:
+                if service.provisioned and service.service_time is not None:  # only the services which already left the system, i.e., have a service time
+                    total_service_time += service.service_time
+                    total_holding_time += service.holding_time
+            self.tracked_results['average_availability'].append(total_service_time / total_holding_time)
+            if self.number_disrupted_services > 0:  # avoid division by zero
+                self.tracked_results['average_restorability'].append(self.number_restored_services / self.number_disrupted_services)
+            else:  # if no failures, 100% restorability
+                self.tracked_results['average_restorability'].append(1.)
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
             plots.plot_simulation_progress(self)
 
         #TODO: number of units necessary can also be randomly selected, now it's always one
-        next_arrival = Service(self._processed_arrivals, at, ht, src, src_id, network_units=1, computing_units=1)
+        next_arrival = Service(service_id=self._processed_arrivals, 
+                               arrival_time=at, 
+                               holding_time=ht,
+                               source=src, 
+                               source_id=src_id)
+        self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
 
     def set_load(self, load=None, mean_service_holding_time=None):
@@ -268,7 +313,6 @@ class Environment:
 
     def reject_service(self, service):
         service.provisioned = False
-        self.topology.graph['services'].append(service)
         self._rejected_services += 1
 
     def release_path(self, service):
@@ -360,23 +404,25 @@ def run_simulation(env: Environment):
     logger.info(f'Finishing simulation for load {env.load} and policy {env.routing_policy.name}')
 
 
+@dataclass(eq=False, repr=False)
 class Service:
     """"
     Class that defines one service in the system.
     """
-    def __init__(self, serv_id, at, ht, src, src_id, network_units=1, computing_units=1) -> None:
-        self.service_id = serv_id
-        self.arrival_time = at
-        self.holding_time = ht
-        self.source = src
-        self.source_id = src_id
-        self.destination = None
-        self.destination_id = None
-        self.network_units = network_units  # number of network units required
-        self.computing_units = computing_units  # number of CPUs required at the DC
-        self.route = None  # route to be followed
-        self.provisioned = False  # whether the service was provisioned or not
-        self.failed = False
+    service_id: int = field(compare=True)
+    arrival_time: float
+    holding_time: float
+    source: str
+    source_id: int
+    destination: Optional[str] = field(init=False)
+    destination_id: Optional[int] = field(init=False)
+    route: Optional[Path] = field(init=False)
+    service_time: Optional[float] = field(init=False, default=None)
+    availability: Optional[float] = field(init=False)
+    network_units: int = field(default=1)
+    computing_units: int = field(default=1)
+    provisioned: bool = field(default=False)
+    failed: bool = field(default=False)
     
     def __repr__(self) -> str:
         return f'<Service {self.service_id}, {self.source} -> {self.destination}>'
@@ -388,24 +434,25 @@ class Service:
         return False
 
 
+@dataclass
 class LinkFailure:
-    def __init__(self, link: Sequence[str], at: float, duration: float) -> None:
-        self.link_to_fail = link
-        self.arrival_time = at
-        self.duration = duration
+    link_to_fail: Sequence[str]
+    arrival_time: float
+    duration: float
 
 
-class SRLGFailure:
-    def __init__(self, links: Sequence[Sequence[str]], at: float, duration: float) -> None:
-        # TODO: implement this method
-        pass
+@dataclass
+class DisasterFailure:
+    links: Sequence[Sequence[str]]
+    arrival_time: float
+    duration: float
 
 
+@dataclass
 class Event:
     """
     Class that models one event of the event queue.
     """
-    def __init__(self, time=-1, call=None, params=None):
-        self.time = time
-        self.call = call
-        self.params = params
+    time: float
+    call: Callable
+    params: Any
