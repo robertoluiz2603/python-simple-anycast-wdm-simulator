@@ -12,7 +12,6 @@ import plots
 import routing_policies
 import restoration_policies
 
-
 class Environment:
 
     def __init__(self, args=None, topology=None, results=None, seed=None, load=None, 
@@ -214,7 +213,9 @@ class Environment:
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0
         self.setup_next_arrival()
-        self.setup_next_link_failure()
+        self.setup_next_link_disaster()
+        #self.setup_next_link_failure()
+        
         
     def setup_next_arrival(self):
         """
@@ -354,7 +355,7 @@ class Environment:
         Sets number of link failures in a disaster
         """
 
-        at = self.current_time + self.rng.expovariate(1/self.mean_feilure_inter_arrival_time)
+        at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
         duration = self.rng.expovariate(1/self.mean_failure_duration)
         
         #TODO: Use disaster zones

@@ -2,9 +2,8 @@ from os import link
 from typing import Sequence
 import typing
 
-from core import DisasterFailure
 if typing.TYPE_CHECKING:  # avoid circular imports
-    from core import Environment, Service, LinkFailure
+    from core import Environment, Service, LinkFailure, DisasterFailure
 
 
 def arrival(env: 'Environment', service: 'Service') -> None:
@@ -102,14 +101,16 @@ def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
     env.setup_next_link_failure()
     
 
-def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure')  -> None:
+def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     from core import Event
 
     env.tracked_results['link_disaster_arrivals'].append(env.current_time)
-
+    env.logger.debug(f'Disaster arrived at time: {env.current_time}')
+    count = 0
     link = []
-    for i in DisasterFailure.links:
-        link = i
+    for link_failure in disaster.links:
+        count +=1
+        link = link_failure
         env.topology[link[0]][link[1]]['failed'] = True
         services_disrupted: Sequence[Service] = []  # create an empty list
 
@@ -117,7 +118,7 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure')  -> 
         services_disrupted.extend(env.topology[link[0]][link[1]]['running_services'])
         number_disrupted_services: int = len(services_disrupted)
 
-        env.logger.debug(f'Failure arrived at time: {env.current_time}\tLink: {link}\tfor {number_disrupted_services} services')
+        env.logger.debug(f'Disaster ({count}/2) Link: {link}\tfor {number_disrupted_services} services')
 
         for service in services_disrupted:
             # release all resources used
@@ -154,7 +155,7 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure')  -> 
         # register statistics such as restorability
         if number_disrupted_services > 0:
             restorability = number_restored_services / number_disrupted_services
-            env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
+            env.logger.debug(f'Disaster ({count}/2) at {env.current_time}\tRestorability: {restorability}')
         # accummulating the totals in the environment object
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
@@ -164,14 +165,14 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure')  -> 
 
 def link_disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
     # in this case, only a single link failure is at the network at a given point in time
-    env.logger.debug(f'Disaster repaired at time: {env.current_time}\tLinks: {disaster.links}')
+    env.logger.debug(f'Disaster repaired at time: {env.current_time} Links: {disaster.links}')
 
     # tracking departures
     env.tracked_results['link_disaster_departures'].append(env.current_time)
 
     # put the link back in a working state
-    for i in DisasterFailure.links:
-        link = i
+    for link_failure in disaster.links:
+        link = link_failure
         env.topology[link[0]][link[1]]['failed'] = False
 
     env.setup_next_link_disaster()
