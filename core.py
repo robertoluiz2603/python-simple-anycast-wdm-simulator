@@ -342,7 +342,23 @@ class Environment:
         failure = LinkFailure(link, at, duration)
 
         self.add_event(Event(failure.arrival_time, events.link_failure_arrival, failure))
+    
+    def setup_next_link_disaster(self):
+        if self._processed_arrivals > self.num_arrivals:
+            return
         
+        links  = [""]
+        occurences = 2
+        at = self.current_time + self.rng.expovariate(1/self.mean_feilure_inter_arrival_time)
+        duration = self.rng.expovariate(1/self.mean_failure_duration)
+        
+        for i in range(occurences):
+            link = self.rng.choice([x for x in self.topology.edges()])
+            links += link
+        
+        disaster = DisasterFailure(links, at, duration)
+        self.add_event(Event(disaster.arrival_time, events.links_disaster_arrival, disaster))
+            
     def _update_link_stats(self, node1, node2):
         """
         Updates link statistics following a time-weighted manner.
@@ -433,20 +449,17 @@ class Service:
             return self.service_id == other.service_id
         return False
 
-
 @dataclass
 class LinkFailure:
     link_to_fail: Sequence[str]
     arrival_time: float
     duration: float
 
-
 @dataclass
 class DisasterFailure:
     links: Sequence[Sequence[str]]
     arrival_time: float
     duration: float
-
 
 @dataclass
 class Event:

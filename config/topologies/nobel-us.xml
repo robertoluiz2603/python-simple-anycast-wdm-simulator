@@ -87,6 +87,10 @@
     </coordinates>
    </node>
   </nodes>
+  <disaster_zone>
+    <zone id="Z1">
+    </zone>
+  </disaster_zone>
   <links>
    <link id="L1">
     <source>Palo-Alto</source>

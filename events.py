@@ -86,7 +86,6 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
 
     env.add_event(Event(env.current_time + failure.duration, link_failure_departure, failure))
 
-
 def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
     # in this case, only a single link failure is at the network at a given point in time
     env.logger.debug(f'Failure repaired at time: {env.current_time}\tLink: {failure.link_to_fail}')
@@ -98,3 +97,8 @@ def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
     env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['failed'] = False
 
     env.setup_next_link_failure()
+
+def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure')  -> None:
+    from core import Event
+
+    pass
