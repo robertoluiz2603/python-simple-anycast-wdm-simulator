@@ -124,7 +124,8 @@ class Environment:
         self.plot_tracked_stats_every: int = 1000  # frequency at which results are plotted
         self.tracked_results: dict = {}
         self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
-                                        'average_availability', 'average_restorability', 'link_failure_arrivals', 'link_failure_departures']
+                                        'average_availability', 'average_restorability', 'link_failure_arrivals', 
+                                        'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -347,14 +348,19 @@ class Environment:
         if self._processed_arrivals > self.num_arrivals:
             return
         
-        links  = [""]
+        links  = []
         occurences = 2
+        """
+        Sets number of link failures in a disaster
+        """
+
         at = self.current_time + self.rng.expovariate(1/self.mean_feilure_inter_arrival_time)
         duration = self.rng.expovariate(1/self.mean_failure_duration)
         
+        #TODO: Use disaster zones
         for i in range(occurences):
             link = self.rng.choice([x for x in self.topology.edges()])
-            links += link
+            links.append(link)
         
         disaster = DisasterFailure(links, at, duration)
         self.add_event(Event(disaster.arrival_time, events.links_disaster_arrival, disaster))
