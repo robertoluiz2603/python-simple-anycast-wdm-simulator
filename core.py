@@ -214,6 +214,7 @@ class Environment:
                 self.topology.nodes[node]['total_units'] = 0
         self.setup_next_arrival()
         self.setup_next_link_disaster()
+
         #self.setup_next_link_failure()
         
         

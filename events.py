@@ -6,6 +6,7 @@ if typing.TYPE_CHECKING:  # avoid circular imports
     from core import Environment, Service, LinkFailure, DisasterFailure
 
 
+
 def arrival(env: 'Environment', service: 'Service') -> None:
     # logging.debug('Processing arrival {} for policy {} load {} seed {}'
     #               .format(service.service_id, env.policy, env.load, env.seed))
@@ -104,6 +105,11 @@ def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
 def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     from core import Event
 
+    cs = open("results/check_services.txt", "a")
+    total_services = 0
+    total_restored = 0
+    total_lost = 0
+
     env.tracked_results['link_disaster_arrivals'].append(env.current_time)
     env.logger.debug(f'Disaster arrived at time: {env.current_time}')
     count = 0
@@ -117,6 +123,7 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
         # extend the list with the running services
         services_disrupted.extend(env.topology[link[0]][link[1]]['running_services'])
         number_disrupted_services: int = len(services_disrupted)
+        total_services += number_disrupted_services
 
         env.logger.debug(f'Disaster ({count}/2) Link: {link}\tfor {number_disrupted_services} services')
 
@@ -151,15 +158,25 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
             else:  # service could be restored
                 number_restored_services += 1
                 # puts the connection back into the network
-                
+        total_restored+=number_restored_services       
         # register statistics such as restorability
         if number_disrupted_services > 0:
             restorability = number_restored_services / number_disrupted_services
             env.logger.debug(f'Disaster ({count}/2) at {env.current_time}\tRestorability: {restorability}')
+
+            total_lost += (number_disrupted_services-number_restored_services)
+
         # accummulating the totals in the environment object
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
-
+    cs.write("\n\nTotal disrupted: \t")
+    cs.write(str(total_services))
+    cs.write("\nTotal restored: \t")
+    cs.write(str(total_restored))
+    cs.write("\nTotal lost: \t")
+    cs.write(str(total_lost))
+    cs.close()
+    
     env.add_event(Event(env.current_time + disaster.duration, link_disaster_departure, disaster))
   
 
