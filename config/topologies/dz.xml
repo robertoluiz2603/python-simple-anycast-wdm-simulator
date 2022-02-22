@@ -1,0 +1,12 @@
+<disaster_zones>
+  <zone id = 'Z1'>
+    <disaster_link>L1</disaster_link>
+    <disaster_link>L2</disaster_link>
+    <disaster_node>Palo-Alto</disaster_node>
+  </zone>
+    <zone id = 'Z2'>
+    <disaster_link>L4</disaster_link>
+    <disaster_link>L5</disaster_link>
+    <disaster_node>San-Diego</disaster_node>
+  </zone>
+</disaster_zones>

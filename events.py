@@ -2,6 +2,7 @@ from os import link
 from typing import Sequence
 import typing
 
+
 if typing.TYPE_CHECKING:  # avoid circular imports
     from core import Environment, Service, LinkFailure, DisasterFailure
 

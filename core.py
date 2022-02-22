@@ -6,6 +6,9 @@ from typing import Any, Callable, List, Optional, Sequence
 from dataclasses import dataclass, field
 import numpy as np
 
+import xml.etree.ElementTree as ET
+
+from inspect import getmembers, isclass, isfunction
 from graph import Path
 import events
 import plots
@@ -212,6 +215,7 @@ class Environment:
             else:
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0
+    
         self.setup_next_arrival()
         self.setup_next_link_disaster()
 
@@ -349,20 +353,27 @@ class Environment:
     def setup_next_link_disaster(self):
         if self._processed_arrivals > self.num_arrivals:
             return
-        
-        links  = []
-        occurences = 2
-        """
-        Sets number of link failures in a disaster
-        """
+        links = []
+        zones = []
+        dzfile = 'config/topologies/nobel-us.xml'
+        dztree = ET.parse(dzfile)
+        #ET.register_namespace("","http://sndlib.zib.de/network")
+        #ns = {"","http://sndlib.zib.de/network"}
+
+        root = dztree.getroot()
+        for elm in root.findall(".//zone"):
+            zones.append(elm.attrib['id'])
+        zone_to_fail = random.choice(zones)
+
+        for i in root.findall(".//zone[@id='"+zone_to_fail+"']/disaster_link"):
+            link = []
+            for j in root.findall(".//link[@id='"+i.text+"']/"):
+                if(j.text != "\n     "):
+                    link.append(j.text)
+            links.append(link)
 
         at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
         duration = self.rng.expovariate(1/self.mean_failure_duration)
-        
-        #TODO: Use disaster zones
-        for i in range(occurences):
-            link = self.rng.choice([x for x in self.topology.edges()])
-            links.append(link)
         
         disaster = DisasterFailure(links, at, duration)
         self.add_event(Event(disaster.arrival_time, events.links_disaster_arrival, disaster))

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<network xmlns="http://sndlib.zib.de/network" version="1.0">
+<network version="1.0">
  <networkStructure>
   <nodes coordinatesType="geographical">
    <node id="Palo-Alto">
@@ -87,10 +87,6 @@
     </coordinates>
    </node>
   </nodes>
-  <disaster_zone>
-    <zone id="Z1">
-    </zone>
-  </disaster_zone>
   <links>
    <link id="L1">
     <source>Palo-Alto</source>
@@ -4037,4 +4033,16 @@
    <demandValue>16.0</demandValue>
   </demand>
  </demands>
+ <disaster_zones>
+  <zone id = 'Z1'>
+    <disaster_link>L1</disaster_link>
+    <disaster_link>L2</disaster_link>
+    <disaster_node>Palo-Alto</disaster_node>
+  </zone>
+    <zone id = 'Z2'>
+    <disaster_link>L4</disaster_link>
+    <disaster_link>L5</disaster_link>
+    <disaster_node>San-Diego</disaster_node>
+  </zone>
+</disaster_zones>
 </network>
