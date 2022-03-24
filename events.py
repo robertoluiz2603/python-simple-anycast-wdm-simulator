@@ -1,6 +1,11 @@
+from asyncio.windows_events import NULL
+from lib2to3.pytree import Node
 from os import link
+from platform import node
 from typing import Sequence
 import typing
+from xml.dom.minicompat import NodeList
+import graph
 
 
 if typing.TYPE_CHECKING:  # avoid circular imports
@@ -32,7 +37,7 @@ def departure(env: 'Environment', service: 'Service') -> None:
 
 def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
     from core import Event
-
+    cs = open("results/check_services.txt", "a")
     # saving status
     env.tracked_results['link_failure_arrivals'].append(env.current_time)
     
@@ -65,9 +70,9 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
         env.logger.critical('Not all services were removed')
     
     # call the restoration strategy
-    env.restoration_policy.restore(services_disrupted)
+    services_disrupted = env.restoration_policy.HRP(services_disrupted, failure.duration)
 
-    # post-process the services => compute stats
+    number_lost_services: int = 0
     number_restored_services: int = 0
     for service in services_disrupted:
         if service.failed:  # service could not be restored
@@ -75,11 +80,14 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
             service.service_time = env.current_time - service.arrival_time
             # computing the availability <= 1.0
             service.availability = service.service_time / service.holding_time
+
+            number_lost_services+=1
         
         else:  # service could be restored
             number_restored_services += 1
             # puts the connection back into the network
-            
+
+
     # register statistics such as restorability
     if number_disrupted_services > 0:
         restorability = number_restored_services / number_disrupted_services
@@ -87,6 +95,14 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
     # accummulating the totals in the environment object
     env.number_disrupted_services += number_disrupted_services
     env.number_restored_services += number_restored_services
+
+    cs.write("\n\nTotal disrupted: \t")
+    cs.write(str(services_disrupted))
+    cs.write("\nTotal restored: \t")
+    cs.write(str(number_restored_services))
+    cs.write("\nTotal lost: \t")
+    cs.write(str(number_lost_services))
+    cs.close()
 
     env.add_event(Event(env.current_time + failure.duration, link_failure_departure, failure))
 
@@ -114,7 +130,12 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
     env.tracked_results['link_disaster_arrivals'].append(env.current_time)
     env.logger.debug(f'Disaster arrived at time: {env.current_time}')
     count = 0
+    total_links = len(disaster.links)
     link = []
+
+    for node in disaster.nodes:
+        env.topology.nodes[node]['failed'] = True
+
     for link_failure in disaster.links:
         count +=1
         link = link_failure
@@ -125,8 +146,8 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
         services_disrupted.extend(env.topology[link[0]][link[1]]['running_services'])
         number_disrupted_services: int = len(services_disrupted)
         total_services += number_disrupted_services
-
-        env.logger.debug(f'Disaster ({count}/2) Link: {link}\tfor {number_disrupted_services} services')
+        
+        env.logger.debug(f'Disaster ({count}/{total_links}) Link: {link}\tfor {number_disrupted_services} services')
 
         for service in services_disrupted:
             # release all resources used
@@ -145,7 +166,7 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
             env.logger.critical('Not all services were removed')
         
         # call the restoration strategy
-        env.restoration_policy.restore(services_disrupted)
+        
 
         # post-process the services => compute stats
         number_restored_services: int = 0
@@ -163,7 +184,7 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
         # register statistics such as restorability
         if number_disrupted_services > 0:
             restorability = number_restored_services / number_disrupted_services
-            env.logger.debug(f'Disaster ({count}/2) at {env.current_time}\tRestorability: {restorability}')
+            env.logger.debug(f'Disaster ({count}/{total_links}) at {env.current_time}\tRestorability: {restorability}')
 
             total_lost += (number_disrupted_services-number_restored_services)
 
@@ -192,5 +213,8 @@ def link_disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> 
     for link_failure in disaster.links:
         link = link_failure
         env.topology[link[0]][link[1]]['failed'] = False
+
+    for node in disaster.nodes:
+        env.topology.nodes[node]['failed'] = False
 
     env.setup_next_link_disaster()

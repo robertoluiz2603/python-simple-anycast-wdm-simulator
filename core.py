@@ -1,4 +1,5 @@
 import logging
+from platform import node
 import random
 import heapq
 import multiprocessing
@@ -98,7 +99,7 @@ class Environment:
             self.routing_policy = routing_policy  # parameter has precedence over argument
             self.routing_policy.env = self
         
-        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.OldestFirst()
+        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.HRPPolicy
         self.restoration_policy.env = self
         if restoration_policy is not None:
             self.restoration_policy = restoration_policy
@@ -217,9 +218,8 @@ class Environment:
                 self.topology.nodes[node]['total_units'] = 0
     
         self.setup_next_arrival()
-        self.setup_next_link_disaster()
-
-        #self.setup_next_link_failure()
+        self.setup_next_link_failure()
+        #self.setup_next_link_disaster()
         
         
     def setup_next_arrival(self):
@@ -262,12 +262,21 @@ class Environment:
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
             plots.plot_simulation_progress(self)
 
+        priority_ratio = random.randint(1,10)
+        if priority_ratio > 3:
+            rand_priority = 3
+        elif priority_ratio >1:
+            rand_priority = 2
+        else:
+            rand_priority = 1
+
         #TODO: number of units necessary can also be randomly selected, now it's always one
         next_arrival = Service(service_id=self._processed_arrivals, 
                                arrival_time=at, 
                                holding_time=ht,
                                source=src, 
-                               source_id=src_id)
+                               source_id=src_id,
+                               priority=rand_priority)
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
 
@@ -355,6 +364,7 @@ class Environment:
             return
         links = []
         zones = []
+        nodes_to_fail=[]
         dzfile = 'config/topologies/nobel-us.xml'
         dztree = ET.parse(dzfile)
         #ET.register_namespace("","http://sndlib.zib.de/network")
@@ -371,11 +381,14 @@ class Environment:
                 if(j.text != "\n     "):
                     link.append(j.text)
             links.append(link)
-
+        
+        for node in root.findall(".//zone[@id='"+zone_to_fail+"']/disaster_node"):
+            nodes_to_fail.append(node.text)
+        
         at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
         duration = self.rng.expovariate(1/self.mean_failure_duration)
         
-        disaster = DisasterFailure(links, at, duration)
+        disaster = DisasterFailure(links, nodes_to_fail, at, duration)
         self.add_event(Event(disaster.arrival_time, events.links_disaster_arrival, disaster))
             
     def _update_link_stats(self, node1, node2):
@@ -449,6 +462,7 @@ class Service:
     holding_time: float
     source: str
     source_id: int
+    priority: int
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)
@@ -458,6 +472,7 @@ class Service:
     computing_units: int = field(default=1)
     provisioned: bool = field(default=False)
     failed: bool = field(default=False)
+
     
     def __repr__(self) -> str:
         return f'<Service {self.service_id}, {self.source} -> {self.destination}>'
@@ -477,6 +492,7 @@ class LinkFailure:
 @dataclass
 class DisasterFailure:
     links: Sequence[Sequence[str]]
+    nodes: Sequence[str]
     arrival_time: float
     duration: float
 

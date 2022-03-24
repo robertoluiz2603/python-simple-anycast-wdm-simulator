@@ -57,7 +57,7 @@ def read_sndlib_topology(file):
         for node in nodes:
             x = node.getElementsByTagName("x")[0]
             y = node.getElementsByTagName("y")[0]
-            graph.add_node(node.getAttribute("id"), pos=((float(x.childNodes[0].data), float(y.childNodes[0].data))))
+            graph.add_node(node.getAttribute("id"), pos=((float(x.childNodes[0].data), float(y.childNodes[0].data))), failed=False)
         links = document.getElementsByTagName("link")
         for idx, link in enumerate(links):
             source = link.getElementsByTagName("source")[0]

@@ -72,7 +72,7 @@ def run(uargs):
     for policy in exec_policies: # runs the simulations for two policies
         for load in loads:
             
-            restoration_policy_instance = restoration_policies.OldestFirst()
+            restoration_policy_instance = restoration_policies.HRPPolicy()
 
             if policy == 'CADC':
                 routing_policy_instance = routing_policies.ClosestAvailableDC()
