@@ -1,6 +1,7 @@
 import abc
 from asyncio.windows_events import NULL
 from email.charset import SHORTEST
+from importlib.resources import path
 from msilib.schema import Environment
 from pickle import FALSE
 import typing
@@ -18,7 +19,6 @@ class RestorationPolicy(abc.ABC):
     def __init__(self) -> None:
         self.env = None
         self.name = None
-    
 
     #def HRP(self, services: Sequence['Service'], disaster_duration):
     @abc.abstractclassmethod
@@ -27,6 +27,10 @@ class RestorationPolicy(abc.ABC):
 
     @abc.abstractclassmethod
     def shortestPath (self, service: 'Service') -> Tuple[bool, str, 'Path']:
+        pass
+    
+    @abc.abstractclassmethod
+    def sort_services (self, services: Sequence['Service']):
         pass
 
 class HRPPolicy(RestorationPolicy):
@@ -49,13 +53,13 @@ class HRPPolicy(RestorationPolicy):
         dc = service.source
         closest_path_hops = np.finfo(0.0).max
         if self.env.topology.nodes[dc]['available_units'] >= service.computing_units:
-                paths = self.env.topology.graph['ksp'][service.source, dc]
-        for path in enumerate(paths):
-            if routing_policies.is_path_viable(self.env.topology, path, service.network_units) and closest_path_hops > path.hops:
-                paths = self.env.topology.graph['ksp'][service.source, dc]
-                closest_path_hops = path.hops
-                closest_path = path
-        return closest_path 
+            paths = self.env.topology.graph['ksp'][service.source, dc]
+            for path in enumerate(paths):
+                if routing_policies.is_path_viable(self.env.topology, path, service.network_units) and closest_path_hops > path.hops:
+                    paths = self.env.topology.graph['ksp'][service.source, dc]
+                    closest_path_hops = path.hops
+                    closest_path = path
+        return closest_path, closest_path_hops
     
     def restorePath( self, service: 'Service') ->None:
         service.failed = FALSE
@@ -84,44 +88,68 @@ class HRPPolicy(RestorationPolicy):
     def dropService(self, service:'Service'):
         service.failed=True
         return      
+    
+    def sort_services (self, services: Sequence['Service']):
+        
+        temp: Sequence['Service']
+        for i in range(len(services)):
+            for j in range(0, len(services) - i - 1):
+                if services[j].remaining_time > services[j + 1].remaining_time:
+                    temp = services[j]
+                    services[j] = services[j+1]
+                    services[j+1] = temp
+        return services
+
+    def hop_count(self, path):
+        pass
 
     def HRP(self, services: Sequence['Service'], disaster_duration):
         # TODO: implement the method
-        sorted_services: Sequence['Service']
         restored_services = 0 
         failed_services = 0
         
         for service in services:
-            remaining_time =  (service.holding_time - disaster_duration)
-            sorted_services = sort(services, key=(service.priority*remaining_time))
+            service.remaining_time = (service.holding_time - disaster_duration)
 
-        for service in sorted_services:
+        services = HRPPolicy.sort_services(self, services)
+        '''
+        if(services != None):
+            print("remaining time: ")
+            for service in services:
+                print(service.remaining_time)
+        else:
+            return services
+        '''
+        for service in services:
             curRoute = selRoute = selDC = None
             if HRPPolicy.shortestPath(self, service) != None:
                 selRoute = HRPPolicy.shortestPath(self, service)
-                service.route = selRoute
+                service.route = selRoute[0]
                 service.failed = False
                 restored_services+=1
             else:
                 for dc_node in self.env.topology.graph['dcs']:
-                    if (remaining_time > disaster_duration) and (self.env.topology.nodes[dc_node]['available_units'] > serv.computing_units):
-                        curRoute = HRPPolicy.shortestPath(self, service)
-                        if curRoute.hops < selRoute.hops:
+                    if (service.remaining_time > disaster_duration) and (self.env.topology.nodes[dc_node]['available_units'] > service.computing_units):
+                        route = HRPPolicy.shortestPath(self, service)
+                        curRoute = route
+
+                        print("Current route: ", curRoute)
+                        if curRoute[1] < selRoute[1]:
                             selRoute = curRoute
-                if selRoute != None:
-                    HRPPolicy.relocateAndRestorePath(self, service, selRoute)
+                if selRoute[0] != None:
+                    HRPPolicy.relocateAndRestorePath(self, service, selRoute[0])
                     service.failed = False
                     restored_services+=1
                 else:
                     HRPPolicy.dropService(self, service)
                     failed_services+=1
 
-        return sorted_services
-
-        
+        return services
                                
         # 1. sort the services
 
-        # 2. try to restore (find a path to it)
+        # 2. try to restore (find a path to it). if a path is available, set the route, provision, set to working
 
-        # if a path is available, set the route, provision, set to working
+        #3. If not, try to find an available path from another DC
+
+        #4 At last, if previous is not possible, drop the service

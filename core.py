@@ -155,7 +155,7 @@ class Environment:
         total_service_time: float = 0.
         total_holding_time: float = 0.
         for service in self.services:
-            if service.provisioned:
+            if service.provisioned and service.service_time!=None:
                 total_service_time += service.service_time
                 total_holding_time += service.holding_time
         # add here the code to include other statistics you may want
@@ -213,10 +213,16 @@ class Environment:
                 self.topology.nodes[node]['id'] = idx
                 self.topology.nodes[node]['utilization'] = 0.0
                 self.topology.nodes[node]['last_update'] = 0.0
+                self.topology.nodes[node]['total_storage'] =0
+                self.topology.nodes[node]['available_storage'] = 0
             else:
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0
-    
+
+            print(self.topology.nodes[node])
+            exit()
+        
+
         self.setup_next_arrival()
         self.setup_next_link_failure()
         #self.setup_next_link_disaster()
@@ -276,7 +282,8 @@ class Environment:
                                holding_time=ht,
                                source=src, 
                                source_id=src_id,
-                               priority=rand_priority)
+                               priority=rand_priority,
+                               remaining_time=ht)
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
 
@@ -463,6 +470,8 @@ class Service:
     source: str
     source_id: int
     priority: int
+    remaining_time: int
+    storage_units: int
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)

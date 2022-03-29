@@ -2,6 +2,8 @@ import time
 import typing
 import datetime
 import logging
+
+import matplotlib
 if typing.TYPE_CHECKING:  # avoid circular imports
     from core import Environment
 import numpy as np
@@ -18,6 +20,7 @@ logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 
 def plot_simulation_progress(env: 'Environment'):
+    
     """
     Plots results for a particular configuration.
     """
@@ -66,6 +69,7 @@ def plot_simulation_progress(env: 'Environment'):
     plt.tight_layout()
     # plt.show()
     for format in env.plot_formats:
+        
         plt.savefig('./results/{}/progress_{}_{}_{}.{}'.format(env.output_folder,
                                                                env.routing_policy.name, env.load, env.id_simulation, format))
     plt.close()
@@ -76,7 +80,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     Consolidates the statistics and plots it periodically and at the end of all simulations.
     """
     markers = ['', 'x', 'o']
-
+    matplotlib.use("Agg")
     plt.figure(figsize=(12, 4))
     plt.subplot(1, 3, 1)
     for idp, policy in enumerate(results):

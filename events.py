@@ -37,7 +37,7 @@ def departure(env: 'Environment', service: 'Service') -> None:
 
 def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
     from core import Event
-    cs = open("results/check_services.txt", "a")
+    cs = open("results/"+env.output_folder+"/services_restorability.txt", "a")
     # saving status
     env.tracked_results['link_failure_arrivals'].append(env.current_time)
     
@@ -95,9 +95,9 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
     # accummulating the totals in the environment object
     env.number_disrupted_services += number_disrupted_services
     env.number_restored_services += number_restored_services
-
+    
     cs.write("\n\nTotal disrupted: \t")
-    cs.write(str(services_disrupted))
+    cs.write(str(len(services_disrupted)))
     cs.write("\nTotal restored: \t")
     cs.write(str(number_restored_services))
     cs.write("\nTotal lost: \t")
