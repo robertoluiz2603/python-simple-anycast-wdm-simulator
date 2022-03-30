@@ -1,8 +1,7 @@
 import abc
-from platform import node
 import typing
 import numpy as np
-from typing import Tuple
+from typing import Tuple, Optional
 if typing.TYPE_CHECKING:
     from core import Service
     from graph import Path
@@ -100,13 +99,13 @@ class FullLoadBalancing(RoutingPolicy):
         return found, closest_dc, closest_path  # returns false and an index out of bounds if no path is available
 
 
-def is_path_viable(topology: 'Graph', path: 'Path', number_units: int) -> bool:
+def is_path_viable(topology: 'Graph', path: 'Path', number_network_units: int) -> bool:
     for node in path.node_list:
         if topology.nodes[node]['failed']:
             return False
     for i in range(len(path.node_list) - 1):
         if topology[path.node_list[i]][path.node_list[i + 1]]['failed'] \
-            or topology[path.node_list[i]][path.node_list[i + 1]]['available_units'] < number_units:
+            or topology[path.node_list[i]][path.node_list[i + 1]]['available_units'] < number_network_units:
             return False
     return True
 
@@ -119,3 +118,17 @@ def get_max_usage(topology: 'Graph', path: 'Path') -> int:
     for i in range(len(path.node_list) - 1):
         max_usage = max(max_usage, topology[path.node_list[i]][path.node_list[i + 1]]['total_units'] - topology[path.node_list[i]][path.node_list[i + 1]]['available_units'])
     return max_usage
+
+
+def get_shortest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
+    if service.destination is None:
+        raise ValueError(f"Service should have value for destination, got {service}")
+    closest_path = None
+    closest_path_hops = np.finfo(0.0).max
+    if topology.nodes[service.destination]['available_units'] >= service.computing_units:
+        paths = topology.graph['ksp'][service.source, service.destination]
+        for path in paths:
+            if is_path_viable(topology, path, service.network_units) and closest_path_hops > path.hops:
+                closest_path_hops = path.hops
+                closest_path = path
+    return closest_path

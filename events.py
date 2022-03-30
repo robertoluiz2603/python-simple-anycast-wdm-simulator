@@ -1,16 +1,8 @@
-from asyncio.windows_events import NULL
-from lib2to3.pytree import Node
-from os import link
-from platform import node
 from typing import Sequence
 import typing
-from xml.dom.minicompat import NodeList
-import graph
-
 
 if typing.TYPE_CHECKING:  # avoid circular imports
     from core import Environment, Service, LinkFailure, DisasterFailure
-
 
 
 def arrival(env: 'Environment', service: 'Service') -> None:
@@ -31,7 +23,7 @@ def arrival(env: 'Environment', service: 'Service') -> None:
 def departure(env: 'Environment', service: 'Service') -> None:
     # computing the service time that can be later used to compute availability
     service.service_time = env.current_time - service.arrival_time
-    service.availability = 1.0  # leaving due to service time, so 100% availability
+    service.availability = service.service_time / service.holding_time
     env.release_path(service)
 
 
@@ -70,23 +62,17 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
         env.logger.critical('Not all services were removed')
     
     # call the restoration strategy
-    services_disrupted = env.restoration_policy.HRP(services_disrupted, failure.duration)
+    services_disrupted = env.restoration_policy.restore(services_disrupted)
 
     number_lost_services: int = 0
     number_restored_services: int = 0
     for service in services_disrupted:
         if service.failed:  # service could not be restored
-            # computing the service time that can be later used to compute availability
-            service.service_time = env.current_time - service.arrival_time
-            # computing the availability <= 1.0
-            service.availability = service.service_time / service.holding_time
-
-            number_lost_services+=1
+            number_lost_services += 1
         
         else:  # service could be restored
             number_restored_services += 1
             # puts the connection back into the network
-
 
     # register statistics such as restorability
     if number_disrupted_services > 0:

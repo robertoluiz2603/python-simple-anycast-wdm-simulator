@@ -1,15 +1,12 @@
 import logging
-from platform import node
 import random
 import heapq
 import multiprocessing
 from typing import Any, Callable, List, Optional, Sequence
 from dataclasses import dataclass, field
 import numpy as np
+from networkx import Graph
 
-import xml.etree.ElementTree as ET
-
-from inspect import getmembers, isclass, isfunction
 from graph import Path
 import events
 import plots
@@ -99,7 +96,7 @@ class Environment:
             self.routing_policy = routing_policy  # parameter has precedence over argument
             self.routing_policy.env = self
         
-        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.HRPPolicy
+        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.HRPPolicy()
         self.restoration_policy.env = self
         if restoration_policy is not None:
             self.restoration_policy = restoration_policy
@@ -219,8 +216,8 @@ class Environment:
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0
 
-            print(self.topology.nodes[node])
-            exit()
+            # print(self.topology.nodes[node])
+            # exit()
         
 
         self.setup_next_arrival()
@@ -282,8 +279,7 @@ class Environment:
                                holding_time=ht,
                                source=src, 
                                source_id=src_id,
-                               priority=rand_priority,
-                               remaining_time=ht)
+                               priority=rand_priority)
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
 
@@ -470,8 +466,6 @@ class Service:
     source: str
     source_id: int
     priority: int
-    remaining_time: int
-    storage_units: int
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)

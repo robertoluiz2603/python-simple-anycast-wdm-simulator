@@ -50,12 +50,12 @@ def run(uargs):
         width = 20
         print('Date (UTC):'.ljust(width), datetime.datetime.now(datetime.timezone.utc), file=file)
         print('Date (local):'.ljust(width), datetime.datetime.now(), file=file)
-        repo = git.Repo()
-        print('Commit date:'.ljust(width),
-              datetime.datetime.fromtimestamp(repo.head.object.committed_date).strftime('%Y-%m-%d %H:%M:%S'),
-              file=file)
-        print('Author:'.ljust(width), repo.head.object.committer, file=file)
-        print('GIT hexsha:'.ljust(width), repo.head.object.hexsha, file=file)
+        # repo = git.Repo()
+        # print('Commit date:'.ljust(width),
+        #       datetime.datetime.fromtimestamp(repo.head.object.committed_date).strftime('%Y-%m-%d %H:%M:%S'),
+        #       file=file)
+        # print('Author:'.ljust(width), repo.head.object.committer, file=file)
+        # print('GIT hexsha:'.ljust(width), repo.head.object.hexsha, file=file)
         print('Command:'.ljust(width), ' '.join(sys.argv), file=file)
         print('Arguments:'.ljust(width), args, file=file)
 
@@ -95,6 +95,8 @@ def run(uargs):
             # code for debugging purposes -- it runs without multithreading
             if load == 400 and policy == 'CADC':
                 core.run_simulation(env_t)
+                print("Ran in debug mode... exiting...")
+                exit(0)
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses
