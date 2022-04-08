@@ -82,6 +82,7 @@ class HRPPolicy(RestorationPolicy):
     def restore(self, services: Sequence['Service']):
         # TODO: implement the method
         restored_services = 0 
+        relocated_services = 0
         failed_services = 0
         
         # remaining time = holding time - (current time - arrival time)
@@ -102,11 +103,12 @@ class HRPPolicy(RestorationPolicy):
                 self.env.provision_service(service)
             elif self.relocate_restore_path(service):
                 service.failed = False
+                service.relocated = True
                 restored_services += 1
+                relocated_services += 1
                 self.env.provision_service(service)
             else:  # no alternative was found
                 self.drop_service(service)
-
         return services
                                
         # 1. sort the services

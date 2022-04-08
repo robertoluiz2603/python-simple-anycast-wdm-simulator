@@ -93,10 +93,11 @@ def run(uargs):
                                      output_folder=env.output_folder)
             envs.append(env_t)
             # code for debugging purposes -- it runs without multithreading
-            if load == 400 and policy == 'CADC':
-                core.run_simulation(env_t)
-                print("Ran in debug mode... exiting...")
-                exit(0)
+            
+            #if load == 400 and policy == 'CADC':
+            #    core.run_simulation(env_t)
+            #    print("Ran in debug mode... exiting...")
+            #    exit(0)
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses
@@ -159,11 +160,11 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--threads', type=int, default=env.threads,
                         help='Number of threads to be used to run the simulations (default={})'.format(
                             env.threads))
-    parser.add_argument('--min_load', type=int, default=300,
+    parser.add_argument('--min_load', type=int, default=600,
                         help='Load in Erlangs of the traffic generated (mandatory)')
-    parser.add_argument('--max_load', type=int, default=700,
+    parser.add_argument('--max_load', type=int, default=840,
                         help='Load in Erlangs of the traffic generated (mandatory)')
-    parser.add_argument('--load_step', type=int, default=50,
+    parser.add_argument('--load_step', type=int, default=40,
                         help='Load in Erlangs of the traffic generated (default: {})'.format(50))
     parser.add_argument('-s', '--seed', type=int, default=env.seed,
                         help='Seed of the random numbers (default={})'.format(env.seed))
