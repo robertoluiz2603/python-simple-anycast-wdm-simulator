@@ -32,7 +32,8 @@ def run(uargs):
     logger = logging.getLogger('run')
 
     # in this case, a configuration changes only the load of the network
-    exec_policies = ['CADC', 'FADC', 'FLB']
+    exec_routing_policies = ['CADC', 'FADC', 'FLB']
+    exec_restoration_policies = ['DNR', 'PR', 'PRwR']
     loads = [x for x in range(args.min_load, args.max_load + 1, args.load_step)]
 
     final_output_folder = env.output_folder + '/' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fUTC')
@@ -63,40 +64,55 @@ def run(uargs):
     shutil.copytree('./', f'./results/{env.output_folder}/source-code/',
                     ignore=shutil.ignore_patterns('__pycache__', '*.pyc', '*.md', 'results', 'LICENSE', '*.ipynb', '.git', '.idea', '.gitignore'))
 
+    # preparing the thread-safe data structure to hold the results
     manager = Manager()
     results = manager.dict()
-    for policy in exec_policies: # runs the simulations for two policies
-        results[policy] = {load: manager.list() for load in loads}
+    for routing_policy in exec_routing_policies:
+        results[routing_policy] = manager.dict()
+        for restoration_policy in exec_restoration_policies:
+            results[routing_policy][restoration_policy] = {load: manager.list() for load in loads}
 
     envs = []
-    for policy in exec_policies: # runs the simulations for two policies
-        for load in loads:
-            
-            restoration_policy_instance = restoration_policies.HRPPolicy()
+    for routing_policy in exec_routing_policies:  # runs the simulations for every routing policy
 
-            if policy == 'CADC':
-                routing_policy_instance = routing_policies.ClosestAvailableDC()
-            elif policy == 'FADC':
-                routing_policy_instance = routing_policies.FarthestAvailableDC()
-            elif policy == 'FLB':
-                routing_policy_instance = routing_policies.FullLoadBalancing()
-            else:
-                raise ValueError('Policy was not configured correctly (value set to {})'.format(policy))
-            env_topology = copy.deepcopy(topology) # makes a deep copy of the topology object
-            env_t = core.Environment(uargs,
-                                     topology=env_topology,
-                                     results=results,
-                                     load=load,
-                                     routing_policy=routing_policy_instance,
-                                     restoration_policy=restoration_policy_instance,
-                                     seed=len(exec_policies) * load,
-                                     output_folder=env.output_folder)
-            envs.append(env_t)
-            # code for debugging purposes -- it runs without multithreading
-            if load == 400 and policy == 'CADC':
-                core.run_simulation(env_t)
-                print("Ran in debug mode... exiting...")
-                exit(0)
+        for restoration_policy in exec_restoration_policies:  # runs the simulations for every restoration policy
+
+            for load in loads:  # runs the simulations for every load
+
+                if routing_policy == 'CADC':
+                    routing_policy_instance = routing_policies.ClosestAvailableDC()
+                elif routing_policy == 'FADC':
+                    routing_policy_instance = routing_policies.FarthestAvailableDC()
+                elif routing_policy == 'FLB':
+                    routing_policy_instance = routing_policies.FullLoadBalancing()
+                else:
+                    raise ValueError('Routing policy was not configured correctly (value set to {})'.format(routing_policy))
+
+                if restoration_policy == 'DNR':
+                    restoration_policy_instance = restoration_policies.DoNotRestorePolicy()
+                elif restoration_policy == 'PR':
+                    restoration_policy_instance = restoration_policies.PathRestorationPolicy()
+                elif restoration_policy == 'PRwR':
+                    restoration_policy_instance = restoration_policies.PathRestorationWithRelocationPolicy()
+                else:
+                    raise ValueError('Restoration policy was not configured correctly (value set to {})'.format(restoration_policy))
+
+                env_topology = copy.deepcopy(topology) # makes a deep copy of the topology object
+                env_t = core.Environment(uargs,
+                                        topology=env_topology,
+                                        results=results,
+                                        load=load,
+                                        routing_policy=routing_policy_instance,
+                                        restoration_policy=restoration_policy_instance,
+                                        seed=len(exec_routing_policies) * load,
+                                        output_folder=env.output_folder)
+                envs.append(env_t)
+                # code for debugging purposes -- it runs without multithreading
+                
+                # if load == 600 and routing_policy == 'CADC':
+                #    core.run_simulation(env_t)
+                #    print("Ran in debug mode... exiting...")
+                #    exit(0)
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses
@@ -124,15 +140,18 @@ def run(uargs):
 
     with open('./results/{}/final_results.h5'.format(env.output_folder), 'wb') as file:
         realized_results = dict(results)
-        for k1,v1 in results.items():
-            realized_results[k1] = dict(v1);
-            for k2,v2 in results[k1].items():
-                realized_results[k1][k2] = list(v2)
+        for k1, v1 in results.items():
+            realized_results[k1] = dict(v1)
+            for k2, v2 in results[k1].items():
+                realized_results[k1][k2] = dict(v2)
+                for k3, v3 in results[k1][k2].items():
+                    realized_results[k1][k2][k3] = list(v3)
         pickle.dump({
             'args': uargs,
             'env': env,
             'results': realized_results,
-            'policies': [policy for policy in exec_policies],
+            'routing_policies': [policy for policy in exec_routing_policies],
+            'restoration_policies': [policy for policy in exec_restoration_policies],
             'loads': loads,
             'timedelta': datetime.timedelta(seconds=(time.time() - start_time)),
             'datetime': datetime.datetime.fromtimestamp(time.time())
@@ -159,11 +178,11 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--threads', type=int, default=env.threads,
                         help='Number of threads to be used to run the simulations (default={})'.format(
                             env.threads))
-    parser.add_argument('--min_load', type=int, default=300,
+    parser.add_argument('--min_load', type=int, default=600,
                         help='Load in Erlangs of the traffic generated (mandatory)')
-    parser.add_argument('--max_load', type=int, default=700,
+    parser.add_argument('--max_load', type=int, default=840,
                         help='Load in Erlangs of the traffic generated (mandatory)')
-    parser.add_argument('--load_step', type=int, default=50,
+    parser.add_argument('--load_step', type=int, default=40,
                         help='Load in Erlangs of the traffic generated (default: {})'.format(50))
     parser.add_argument('-s', '--seed', type=int, default=env.seed,
                         help='Seed of the random numbers (default={})'.format(env.seed))

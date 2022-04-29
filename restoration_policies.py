@@ -31,10 +31,21 @@ class RestorationPolicy(abc.ABC):
         service.availability = service.service_time / service.holding_time
 
 
-class HRPPolicy(RestorationPolicy):
+class DoNotRestorePolicy(RestorationPolicy):
     def __init__(self) -> None:
         super().__init__()
-        self.name = 'OF'
+        self.name = 'DNR'
+    
+    def restore(self, services: Sequence['Service']):
+        for service in services:
+            self.drop_service(service)
+        return services
+
+
+class PathRestorationPolicy(RestorationPolicy):
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = 'PR'
     
     def restore_path(self, service: 'Service') -> bool:
         """
@@ -60,6 +71,38 @@ class HRPPolicy(RestorationPolicy):
             service.route = None
             return False
 
+    def restore(self, services: Sequence['Service']):
+        # TODO: implement the method
+        restored_services = 0 
+        relocated_services = 0
+        failed_services = 0
+        
+        # remaining time = holding time - (current time - arrival time)
+        # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
+        services = sorted(services, key=lambda x: x.holding_time - (self.env.current_time - x.arrival_time))
+        '''
+        if(services != None):
+            print("remaining time: ")
+            for service in services:
+                print(service.remaining_time)
+        else:
+            return services
+        '''
+        for service in services:
+            if self.restore_path(service):
+                service.failed = False
+                restored_services += 1
+                self.env.provision_service(service)
+            else:  # no alternative was found
+                self.drop_service(service)
+        return services
+
+
+class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
+    def __init__(self) -> None:
+        super().__init__()
+        self.name = 'PRwR'
+
     def relocate_restore_path(self, service:'Service') -> bool:
         """
         Method that tries to find an alternative DC using the same routing
@@ -82,6 +125,7 @@ class HRPPolicy(RestorationPolicy):
     def restore(self, services: Sequence['Service']):
         # TODO: implement the method
         restored_services = 0 
+        relocated_services = 0
         failed_services = 0
         
         # remaining time = holding time - (current time - arrival time)
@@ -96,23 +140,16 @@ class HRPPolicy(RestorationPolicy):
             return services
         '''
         for service in services:
-            if self.restore_path(service):
+            if self.restore_path(service):  # inherits this method from PathRestorationPolicy
                 service.failed = False
                 restored_services += 1
                 self.env.provision_service(service)
             elif self.relocate_restore_path(service):
                 service.failed = False
+                service.relocated = True
                 restored_services += 1
+                relocated_services += 1
                 self.env.provision_service(service)
             else:  # no alternative was found
                 self.drop_service(service)
-
         return services
-                               
-        # 1. sort the services
-
-        # 2. try to restore (find a path to it). if a path is available, set the route, provision, set to working
-
-        #3. If not, try to find an available path from another DC
-
-        #4 At last, if previous is not possible, drop the service

@@ -32,6 +32,7 @@ class Environment:
         # total number of services restored from failures
         self.number_restored_services: int = 0
 
+        self.number_relocated_services: int =0
         # list with all services processed
         self.services: Sequence[Service] = []
 
@@ -48,7 +49,7 @@ class Environment:
             self.set_load(load=50)
 
         # num_seeds defines the number of seeds (simulations) to be run for each configuration
-        self.num_seeds:int = 25
+        self.num_seeds:int = 20
         if args is not None and hasattr(args, "num_seeds"):
             self.num_seeds = args.num_seeds
 
@@ -96,7 +97,7 @@ class Environment:
             self.routing_policy = routing_policy  # parameter has precedence over argument
             self.routing_policy.env = self
         
-        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.HRPPolicy()
+        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.DoNotRestorePolicy()
         self.restoration_policy.env = self
         if restoration_policy is not None:
             self.restoration_policy = restoration_policy
@@ -120,12 +121,12 @@ class Environment:
         if id_simulation is not None:
             self.id_simulation = id_simulation
 
-        self.track_stats_every: int = 100  # frequency at which results are saved
-        self.plot_tracked_stats_every: int = 1000  # frequency at which results are plotted
+        self.track_stats_every: int = 200  # frequency at which results are saved
+        self.plot_tracked_stats_every: int = 2000  # frequency at which results are plotted
         self.tracked_results: dict = {}
         self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
                                         'average_availability', 'average_restorability', 'link_failure_arrivals', 
-                                        'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures']
+                                        'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures', 'average_relocation']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -157,15 +158,16 @@ class Environment:
                 total_holding_time += service.holding_time
         # add here the code to include other statistics you may want
 
-        self.results[self.routing_policy.name][self.load].append({
+        self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'request_blocking_ratio': self.get_request_blocking_ratio(),
             'average_link_usage': np.mean([self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()]),
             'individual_link_usage': [self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()],
             'average_node_usage': np.mean([self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']]),
             'individual_node_usage': {node: self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']},
             # TODO: add statistics about failures
-            'restorability': self.number_restored_services / self.number_disrupted_services,
-            'availability': total_service_time / total_holding_time
+            'average_restorability': self.number_restored_services / self.number_disrupted_services,
+            'average_availability': total_service_time / total_holding_time,
+            'average_relocation': self.number_relocated_services / self.number_disrupted_services
         })
 
     def reset(self, seed=None, id_simulation=None):
@@ -178,6 +180,8 @@ class Environment:
         self.number_disrupted_services: int = 0
         # total number of services restored from failures
         self.number_restored_services: int = 0
+
+        self.number_relocated_services: int =0
 
         # list with all services processed
         self.services: Sequence[Service] = []
@@ -203,8 +207,10 @@ class Environment:
             self.topology[lnk[0]][lnk[1]]['last_update'] = 0.0
         for idx, node in enumerate(self.topology.nodes()):
             if self.topology.nodes[node]['dc']:
-                self.topology.nodes[node]['available_units'] = self.topology.degree(node) * self.resource_units_per_link
-                self.topology.nodes[node]['total_units'] = self.topology.degree(node) * self.resource_units_per_link
+                #self.topology.nodes[node]['available_units'] = self.topology.degree(node) * self.resource_units_per_link
+                #self.topology.nodes[node]['total_units'] = self.topology.degree(node) * self.resource_units_per_link
+                self.topology.nodes[node]['available_units'] = 900
+                self.topology.nodes[node]['total_units'] = 900
                 self.topology.nodes[node]['services'] = []
                 self.topology.nodes[node]['running_services'] = []
                 self.topology.nodes[node]['id'] = idx
@@ -260,6 +266,7 @@ class Environment:
             self.tracked_results['average_availability'].append(total_service_time / total_holding_time)
             if self.number_disrupted_services > 0:  # avoid division by zero
                 self.tracked_results['average_restorability'].append(self.number_restored_services / self.number_disrupted_services)
+                self.tracked_results['average_relocation'].append(self.number_relocated_services / self.number_disrupted_services)
             else:  # if no failures, 100% restorability
                 self.tracked_results['average_restorability'].append(1.)
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
@@ -475,6 +482,7 @@ class Service:
     computing_units: int = field(default=1)
     provisioned: bool = field(default=False)
     failed: bool = field(default=False)
+    relocated: bool = field(default=False)
 
     
     def __repr__(self) -> str:

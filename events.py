@@ -29,7 +29,7 @@ def departure(env: 'Environment', service: 'Service') -> None:
 
 def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
     from core import Event
-    cs = open("results/"+env.output_folder+"/services_restorability.txt", "a")
+    
     # saving status
     env.tracked_results['link_failure_arrivals'].append(env.current_time)
     
@@ -45,50 +45,53 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
 
     env.logger.debug(f'Failure arrived at time: {env.current_time}\tLink: {failure.link_to_fail}\tfor {number_disrupted_services} services')
 
-    for service in services_disrupted:
-        # release all resources used
-        env.logger.debug(f'Releasing resources for service {service}')
-        env.release_path(service)
+    if len(services_disrupted) > 0:
+        for service in services_disrupted:
+            # release all resources used
+            env.logger.debug(f'Releasing resources for service {service}')
+            env.release_path(service)
 
-        queue_size = len(env.events)
-        env.remove_service_departure(service)
-        if queue_size -1 != len(env.events):
-            env.logger.critical('Event not removed!')
+            queue_size = len(env.events)
+            env.remove_service_departure(service)
+            if queue_size -1 != len(env.events):
+                env.logger.critical('Event not removed!')
 
-        # set it to a failed state
-        service.failed = True
-    
-    if len(env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['running_services']) != 0:
-        env.logger.critical('Not all services were removed')
-    
-    # call the restoration strategy
-    services_disrupted = env.restoration_policy.restore(services_disrupted)
-
-    number_lost_services: int = 0
-    number_restored_services: int = 0
-    for service in services_disrupted:
-        if service.failed:  # service could not be restored
-            number_lost_services += 1
+            # set it to a failed state
+            service.failed = True
         
-        else:  # service could be restored
-            number_restored_services += 1
-            # puts the connection back into the network
+        if len(env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['running_services']) != 0:
+            env.logger.critical('Not all services were removed')
+        
+        # call the restoration strategy
+        services_disrupted = env.restoration_policy.restore(services_disrupted)
 
-    # register statistics such as restorability
-    if number_disrupted_services > 0:
-        restorability = number_restored_services / number_disrupted_services
-        env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
-    # accummulating the totals in the environment object
-    env.number_disrupted_services += number_disrupted_services
-    env.number_restored_services += number_restored_services
+        number_lost_services: int = 0
+        number_restored_services: int = 0
+        number_relocated_services: int =0
+        for service in services_disrupted:
+            if service.failed!=True:  # service could be restored
+                number_restored_services += 1
+            
+                if service.relocated:
+                    number_relocated_services+=1
+
+            else:
+                number_lost_services += 1
+
+        # register statistics such as restorability
+        if number_disrupted_services > 0:
+            restorability = number_restored_services / number_disrupted_services
+            env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
+        # accummulating the totals in the environment object
+        env.number_disrupted_services += number_disrupted_services
+        env.number_restored_services += number_restored_services
+        env.number_relocated_services += number_relocated_services
     
-    cs.write("\n\nTotal disrupted: \t")
-    cs.write(str(len(services_disrupted)))
-    cs.write("\nTotal restored: \t")
-    cs.write(str(number_restored_services))
-    cs.write("\nTotal lost: \t")
-    cs.write(str(number_lost_services))
-    cs.close()
+        # TODO: the code below is not thread safe and therefore might have strange formatting
+        with open("results/"+env.output_folder+"/services_restoration.txt", "a") as txt:
+            txt.write(f"\n\nTotal disrupted: \t\t\t{len(services_disrupted)}")
+            txt.write(f"\nTotal restored (relocated): {number_restored_services} ({number_relocated_services})")
+            txt.write(f"\nTotal lost: \t\t\t\t{number_lost_services}")
 
     env.add_event(Event(env.current_time + failure.duration, link_failure_departure, failure))
 
@@ -103,12 +106,10 @@ def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
     env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['failed'] = False
 
     env.setup_next_link_failure()
-    
 
 def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     from core import Event
 
-    cs = open("results/check_services.txt", "a")
     total_services = 0
     total_restored = 0
     total_lost = 0
@@ -152,7 +153,6 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
             env.logger.critical('Not all services were removed')
         
         # call the restoration strategy
-        
 
         # post-process the services => compute stats
         number_restored_services: int = 0
@@ -177,13 +177,14 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
         # accummulating the totals in the environment object
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
-    cs.write("\n\nTotal disrupted: \t")
-    cs.write(str(total_services))
-    cs.write("\nTotal restored: \t")
-    cs.write(str(total_restored))
-    cs.write("\nTotal lost: \t")
-    cs.write(str(total_lost))
-    cs.close()
+    
+    with open("results/check_services.txt", "a") as cs:
+        cs.write("\n\nTotal disrupted: \t")
+        cs.write(str(total_services))
+        cs.write("\nTotal restored: \t")
+        cs.write(str(total_restored))
+        cs.write("\nTotal lost: \t")
+        cs.write(str(total_lost))
     
     env.add_event(Event(env.current_time + disaster.duration, link_disaster_departure, disaster))
   
