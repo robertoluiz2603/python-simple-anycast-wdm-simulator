@@ -81,11 +81,41 @@ def read_sndlib_topology(file):
     return graph
 
 
+def read_txt_file(file, topology_name):
+    graph = nx.Graph(name=topology_name)
+    nNodes = 0
+    nLinks = 0
+    with open('config/topologies/' + file, 'r') as nodes_lines:
+        for idx, line_full in enumerate(nodes_lines):
+            if "#" in line_full:
+                line = line_full.split("#")[0].strip()
+            else:
+                line = line_full.strip()
+            if idx > 2 and idx <= nNodes + 2: # skip title line
+                info = line.replace("\n", "").replace(',', '.').split("\t")
+                graph.add_node(info[0], name=info[1], pos=(float(info[2]), float(info[3])))
+            elif idx > 2 + nNodes and idx <= 2 + nNodes + nLinks: # skip title line
+                info = line.replace("\n", "").split("\t")
+                n1 = graph.nodes[info[1]]
+                n2 = graph.nodes[info[2]]
+                dist = calculate_geographical_distance(n1['pos'], n2['pos'])
+                # print(n1['name'], n1['pos'], n2['name'], n2['pos'], '{:.2f}'.format(dist), info[3])
+                final_distance = float('{:.2f}'.format(max(dist, float(info[3]))))
+                graph.add_edge(info[1], info[2], id=int(info[0]), weight=1.0, length=final_distance, index=idx-2, failed=False)
+            elif idx == 1:
+                nNodes = int(line)
+            elif idx == 2:
+                nLinks = int(line)
+    return graph
+
+
 def get_topology(args):
     if args.topology_file.endswith('.xml'):
         topology = read_sndlib_topology(args.topology_file)
+    elif args.topology_file.endswith('.txt'):
+        topology = read_txt_file(args.topology_file, args.topology_file.replace(".txt", ""))
     else:
-        raise ValueError('Supplied topology is unknown')
+        raise ValueError(f'Supplied topology  `{args.topology_file}` is unknown')
     return topology
 
 
