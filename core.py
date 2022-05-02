@@ -75,7 +75,7 @@ class Environment:
         if args is not None and hasattr(args, "k_paths"):
             self.k_paths = args.k_paths
 
-        self.threads: int = 4
+        self.threads: int = 7
         if args is not None and hasattr(args, 'threads'):
             self.threads = args.threads
 
