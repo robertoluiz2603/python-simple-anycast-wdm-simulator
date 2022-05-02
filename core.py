@@ -97,7 +97,7 @@ class Environment:
             self.routing_policy = routing_policy  # parameter has precedence over argument
             self.routing_policy.env = self
         
-        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.HRPPolicy()
+        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.DoNotRestorePolicy()
         self.restoration_policy.env = self
         if restoration_policy is not None:
             self.restoration_policy = restoration_policy
@@ -158,7 +158,7 @@ class Environment:
                 total_holding_time += service.holding_time
         # add here the code to include other statistics you may want
 
-        self.results[self.routing_policy.name][self.load].append({
+        self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'request_blocking_ratio': self.get_request_blocking_ratio(),
             'average_link_usage': np.mean([self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()]),
             'individual_link_usage': [self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()],

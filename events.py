@@ -45,7 +45,7 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
 
     env.logger.debug(f'Failure arrived at time: {env.current_time}\tLink: {failure.link_to_fail}\tfor {number_disrupted_services} services')
 
-    if (len(services_disrupted)>0):
+    if len(services_disrupted) > 0:
         for service in services_disrupted:
             # release all resources used
             env.logger.debug(f'Releasing resources for service {service}')
@@ -77,8 +77,6 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
 
             else:
                 number_lost_services += 1
-                
-            
 
         # register statistics such as restorability
         if number_disrupted_services > 0:
@@ -89,11 +87,11 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
         env.number_restored_services += number_restored_services
         env.number_relocated_services += number_relocated_services
     
-        txt= open("results/"+env.output_folder+"/services_restoration.txt", "a")
-        txt.write("\n\nTotal disrupted: \t\t\t"+str(len(services_disrupted)))
-        txt.write("\nTotal restored (relocated): "+str(number_restored_services)+"("+str(number_relocated_services)+")")
-        txt.write("\nTotal lost: \t\t\t\t"+str(number_lost_services))
-        txt.close()
+        # TODO: the code below is not thread safe and therefore might have strange formatting
+        with open("results/"+env.output_folder+"/services_restoration.txt", "a") as txt:
+            txt.write(f"\n\nTotal disrupted: \t\t\t{len(services_disrupted)}")
+            txt.write(f"\nTotal restored (relocated): {number_restored_services} ({number_relocated_services})")
+            txt.write(f"\nTotal lost: \t\t\t\t{number_lost_services}")
 
     env.add_event(Event(env.current_time + failure.duration, link_failure_departure, failure))
 
@@ -108,12 +106,10 @@ def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
     env.topology[failure.link_to_fail[0]][failure.link_to_fail[1]]['failed'] = False
 
     env.setup_next_link_failure()
-    
 
 def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     from core import Event
 
-    cs = open("results/check_services.txt", "a")
     total_services = 0
     total_restored = 0
     total_lost = 0
@@ -157,7 +153,6 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
             env.logger.critical('Not all services were removed')
         
         # call the restoration strategy
-        
 
         # post-process the services => compute stats
         number_restored_services: int = 0
@@ -182,13 +177,14 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
         # accummulating the totals in the environment object
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
-    cs.write("\n\nTotal disrupted: \t")
-    cs.write(str(total_services))
-    cs.write("\nTotal restored: \t")
-    cs.write(str(total_restored))
-    cs.write("\nTotal lost: \t")
-    cs.write(str(total_lost))
-    cs.close()
+    
+    with open("results/check_services.txt", "a") as cs:
+        cs.write("\n\nTotal disrupted: \t")
+        cs.write(str(total_services))
+        cs.write("\nTotal restored: \t")
+        cs.write(str(total_restored))
+        cs.write("\nTotal lost: \t")
+        cs.write(str(total_lost))
     
     env.add_event(Event(env.current_time + disaster.duration, link_disaster_departure, disaster))
   
