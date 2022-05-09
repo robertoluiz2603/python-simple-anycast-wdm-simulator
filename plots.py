@@ -144,6 +144,19 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. restorability')
 
+    plt.subplot(2, 3, 6)
+    has_data = False
+    for idp, policy in enumerate(results):
+        if any(results[policy][load][x]['average_relocation'] > 0 for load in results[policy] for x in
+               range(len(results[policy][load]))):
+            has_data = True
+            plt.plot([load for load in results[policy]],
+                            [np.mean([results[policy][load][x]['average_relocation'] for x in
+                                      range(len(results[policy][load]))]) for
+                             load in results[policy]], label=policy, marker=markers[idp])
+    plt.xlabel('Load [Erlang]')
+    plt.ylabel('Avg. relocation')
+
     total_simulations = np.sum([1 for p in results for l in results[p]]) * env.num_seeds
     performed_simulations = np.sum([len(results[p][l]) for p in results for l in results[p]])
     percentage_completed = float(performed_simulations) / float(total_simulations) * 100.

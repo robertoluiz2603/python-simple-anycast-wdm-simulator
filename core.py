@@ -49,7 +49,7 @@ class Environment:
             self.set_load(load=50)
 
         # num_seeds defines the number of seeds (simulations) to be run for each configuration
-        self.num_seeds:int = 20
+        self.num_seeds:int = 10
         if args is not None and hasattr(args, "num_seeds"):
             self.num_seeds = args.num_seeds
 
@@ -67,7 +67,7 @@ class Environment:
         if args is not None and hasattr(args, "plot_simulation_progress"):
             self.plot_simulation_progress = args.plot_simulation_progress
 
-        self.num_arrivals: int = 10000
+        self.num_arrivals: int = 100000
         if args is not None and hasattr(args, "num_arrivals"):
             self.num_arrivals = args.num_arrivals
 
@@ -121,8 +121,8 @@ class Environment:
         if id_simulation is not None:
             self.id_simulation = id_simulation
 
-        self.track_stats_every: int = 200  # frequency at which results are saved
-        self.plot_tracked_stats_every: int = 2000  # frequency at which results are plotted
+        self.track_stats_every: int = 100  # frequency at which results are saved
+        self.plot_tracked_stats_every: int = 10000  # frequency at which results are plotted
         self.tracked_results: dict = {}
         self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
                                         'average_availability', 'average_restorability', 'link_failure_arrivals', 
