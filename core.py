@@ -205,6 +205,9 @@ class Environment:
             self.topology[lnk[0]][lnk[1]]['id'] = idx
             self.topology[lnk[0]][lnk[1]]['utilization'] = 0.0
             self.topology[lnk[0]][lnk[1]]['last_update'] = 0.0
+            self.topology[lnk[0]][lnk[1]]['link_failure_probability'] = random.uniform(0, 1)
+
+            print("==LINK FAILURE PROBABILITY: ===" + self.topology[lnk[0]][lnk[1]]['linnk_failure_probability'])
         for idx, node in enumerate(self.topology.nodes()):
             if self.topology.nodes[node]['dc']:
                 #self.topology.nodes[node]['available_units'] = self.topology.degree(node) * self.resource_units_per_link
@@ -218,6 +221,7 @@ class Environment:
                 self.topology.nodes[node]['last_update'] = 0.0
                 self.topology.nodes[node]['total_storage'] =0
                 self.topology.nodes[node]['available_storage'] = 0
+                self.topology.nodes[node]['node_failure_probability'] = random.uniform(0, 1)
             else:
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0
@@ -377,8 +381,6 @@ class Environment:
         nodes_to_fail=[]
         dzfile = 'config/topologies/nobel-us.xml'
         dztree = ET.parse(dzfile)
-        #ET.register_namespace("","http://sndlib.zib.de/network")
-        #ns = {"","http://sndlib.zib.de/network"}
 
         root = dztree.getroot()
         for elm in root.findall(".//zone"):
