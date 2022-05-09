@@ -75,7 +75,7 @@ class Environment:
         if args is not None and hasattr(args, "k_paths"):
             self.k_paths = args.k_paths
 
-        self.threads: int = 4
+        self.threads: int = 7
         if args is not None and hasattr(args, 'threads'):
             self.threads = args.threads
 
@@ -97,7 +97,7 @@ class Environment:
             self.routing_policy = routing_policy  # parameter has precedence over argument
             self.routing_policy.env = self
         
-        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.HRPPolicy()
+        self.restoration_policy: restoration_policies.RestorationPolicy = restoration_policies.DoNotRestorePolicy()
         self.restoration_policy.env = self
         if restoration_policy is not None:
             self.restoration_policy = restoration_policy
@@ -158,7 +158,7 @@ class Environment:
                 total_holding_time += service.holding_time
         # add here the code to include other statistics you may want
 
-        self.results[self.routing_policy.name][self.load].append({
+        self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'request_blocking_ratio': self.get_request_blocking_ratio(),
             'average_link_usage': np.mean([self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()]),
             'individual_link_usage': [self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()],
@@ -205,6 +205,9 @@ class Environment:
             self.topology[lnk[0]][lnk[1]]['id'] = idx
             self.topology[lnk[0]][lnk[1]]['utilization'] = 0.0
             self.topology[lnk[0]][lnk[1]]['last_update'] = 0.0
+            self.topology[lnk[0]][lnk[1]]['link_failure_probability'] = random.uniform(0, 1)
+
+            print("==LINK FAILURE PROBABILITY: ===" + self.topology[lnk[0]][lnk[1]]['linnk_failure_probability'])
         for idx, node in enumerate(self.topology.nodes()):
             if self.topology.nodes[node]['dc']:
                 #self.topology.nodes[node]['available_units'] = self.topology.degree(node) * self.resource_units_per_link
@@ -218,6 +221,7 @@ class Environment:
                 self.topology.nodes[node]['last_update'] = 0.0
                 self.topology.nodes[node]['total_storage'] =0
                 self.topology.nodes[node]['available_storage'] = 0
+                self.topology.nodes[node]['node_failure_probability'] = random.uniform(0, 1)
             else:
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0
@@ -377,8 +381,6 @@ class Environment:
         nodes_to_fail=[]
         dzfile = 'config/topologies/nobel-us.xml'
         dztree = ET.parse(dzfile)
-        #ET.register_namespace("","http://sndlib.zib.de/network")
-        #ns = {"","http://sndlib.zib.de/network"}
 
         root = dztree.getroot()
         for elm in root.findall(".//zone"):
