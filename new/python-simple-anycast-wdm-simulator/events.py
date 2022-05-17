@@ -106,7 +106,7 @@ def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
 
     env.setup_next_link_failure()
 
-def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
+def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     from core import Event
 
     total_services = 0
@@ -188,10 +188,10 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
         cs.write("\nTotal lost: \t")
         cs.write(str(total_lost))
     
-    env.add_event(Event(env.current_time + disaster.duration, link_disaster_departure, disaster))
+    env.add_event(Event(env.current_time + disaster.duration, disaster_departure, disaster))
   
 
-def link_disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
+def disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
     # in this case, only a single link failure is at the network at a given point in time
     env.logger.debug(f'Disaster repaired at time: {env.current_time} Links: {disaster.links}')
 
@@ -205,5 +205,3 @@ def link_disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> 
 
     for node in disaster.nodes:
         env.topology.nodes[node]['failed'] = False
-
-    env.setup_next_link_disaster()

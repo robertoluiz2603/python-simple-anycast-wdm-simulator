@@ -27,6 +27,9 @@ class Environment:
 
         self.load: float = 0.0
 
+        self.number_disaster_occurences: int = 4
+        self.remaining_disaster_occurences =  self.number_disaster_occurences
+
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
         # total number of services restored from failures
@@ -78,6 +81,8 @@ class Environment:
         self.threads: int = 7
         if args is not None and hasattr(args, 'threads'):
             self.threads = args.threads
+
+        self.disaster_arrivals_interval = self.num_arrivals/ self.number_disaster_occurences
 
         self.topology_file: str = "nobel-us.xml"  #"nobel-us.xml" #"test-topo.xml"
         self.topology_name: str = 'nobel-us'
@@ -195,6 +200,8 @@ class Environment:
         if id_simulation is not None:
             self.id_simulation = id_simulation
 
+        self.remaining_disaster_occurences =  self.number_disaster_occurences
+
         # (re)-initialize the graph
         self.topology.graph['running_services'] = []
         for idx, lnk in enumerate(self.topology.edges()):
@@ -225,7 +232,7 @@ class Environment:
                 self.topology.nodes[node]['total_units'] = 0        
 
         self.setup_next_arrival()
-        self.setup_next_link_disaster()
+        
         
     def setup_next_arrival(self):
         """
@@ -268,24 +275,17 @@ class Environment:
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
             plots.plot_simulation_progress(self)
 
-        priority_ratio = random.randint(1,10)
-        if priority_ratio > 3:
-            rand_priority = 3
-        elif priority_ratio >1:
-            rand_priority = 2
-        else:
-            rand_priority = 1
-
         #TODO: number of units necessary can also be randomly selected, now it's always one
         next_arrival = Service(service_id=self._processed_arrivals, 
                                arrival_time=at, 
                                holding_time=ht,
                                source=src, 
-                               source_id=src_id,
-                               priority=rand_priority)
+                               source_id=src_id)
 
-        print("Service time")
-        print(at)
+        if(self._processed_arrivals == self.num_arrivals/(self.remaining_disaster_occurences+1) and self.remaining_disaster_occurences>=0):
+            self.setup_next_disaster()
+            self.remaining_disaster_occurences -= 1
+
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
 
@@ -368,7 +368,7 @@ class Environment:
 
         self.add_event(Event(failure.arrival_time, events.link_failure_arrival, failure))
     
-    def setup_next_link_disaster(self):
+    def setup_next_disaster(self):
         if self._processed_arrivals > self.num_arrivals:
             return
         zones = []
@@ -407,13 +407,12 @@ class Environment:
                 link_tgt = tgt.text
             self.topology[link_src][ link_tgt]['link_failure_probability'] = link.attrib['probability']
 
-        at = 180000.0
-        #self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
-        print("Disaster time")
+        at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
+
         duration = self.rng.expovariate(1/self.mean_failure_duration)
         
         disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
-        self.add_event(Event(disaster.arrival_time, events.links_disaster_arrival, disaster))
+        self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
             
     def _update_link_stats(self, node1, node2):
         """
@@ -486,7 +485,6 @@ class Service:
     holding_time: float
     source: str
     source_id: int
-    priority: int
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)
