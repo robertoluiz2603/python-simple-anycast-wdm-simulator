@@ -193,6 +193,9 @@ if __name__ == '__main__':
                         help='Time interval for plotting intermediate statistics of the simulation in seconds (default={})'.format(te))
     parser.add_argument('-o', '--output_folder', default=env.output_folder,
                         help='Output folder inside results (default={})'.format(env.output_folder))
-    # TODO: implementar argumentos pro failure inter arrival time e failure duration
+    parser.add_argument('-do', '--disaster_occurences', default=env.number_disaster_occurences,
+                        help='Number of disasters to occur for each seed simulated'.format(env.number_disaster_occurences))
+    parser.add_argument('-fd', '--failure_duration', default=env.mean_failure_duration,
+                        help='Mean failure or disaster duration'.format(env.mean_failure_duration))
     args = parser.parse_args()
     run(args)

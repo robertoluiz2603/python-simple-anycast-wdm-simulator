@@ -10,7 +10,6 @@ def arrival(env: 'Environment', service: 'Service') -> None:
     #               .format(service.service_id, env.policy, env.load, env.seed))
 
     success, dc, path = env.routing_policy.route(service)
-
     if success:
         service.route = path
         env.provision_service(service)
@@ -107,7 +106,7 @@ def link_failure_departure(env: 'Environment', failure: 'LinkFailure') -> None:
 
     env.setup_next_link_failure()
 
-def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
+def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     from core import Event
 
     total_services = 0
@@ -123,15 +122,18 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
     for node in disaster.nodes:
         env.topology.nodes[node]['failed'] = True
 
+    
     for link_failure in disaster.links:
         count +=1
         link = link_failure
         env.topology[link[0]][link[1]]['failed'] = True
         services_disrupted: Sequence[Service] = []  # create an empty list
-
+        
         # extend the list with the running services
         services_disrupted.extend(env.topology[link[0]][link[1]]['running_services'])
         number_disrupted_services: int = len(services_disrupted)
+        print(number_disrupted_services)
+
         total_services += number_disrupted_services
         
         env.logger.debug(f'Disaster ({count}/{total_links}) Link: {link}\tfor {number_disrupted_services} services')
@@ -186,10 +188,10 @@ def links_disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> N
         cs.write("\nTotal lost: \t")
         cs.write(str(total_lost))
     
-    env.add_event(Event(env.current_time + disaster.duration, link_disaster_departure, disaster))
+    env.add_event(Event(env.current_time + disaster.duration, disaster_departure, disaster))
   
 
-def link_disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
+def disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
     # in this case, only a single link failure is at the network at a given point in time
     env.logger.debug(f'Disaster repaired at time: {env.current_time} Links: {disaster.links}')
 
@@ -203,5 +205,3 @@ def link_disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> 
 
     for node in disaster.nodes:
         env.topology.nodes[node]['failed'] = False
-
-    env.setup_next_link_disaster()

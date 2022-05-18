@@ -57,14 +57,7 @@ def plot_simulation_progress(env: 'Environment'):
     plt.xlabel('Arrival')
     plt.ylabel('System avg. restorability')
 
-    plt.subplot(2, 3, 6)
-    plt.scatter(env.tracked_results['link_failure_arrivals'],
-                 np.full((1, len(env.tracked_results['link_failure_arrivals'])), fill_value=1), label='Arrival')
-    plt.scatter(env.tracked_results['link_failure_departures'],
-                 np.full((1, len(env.tracked_results['link_failure_departures'])), fill_value=0), label='Departure')
-    plt.xlabel('Arrival')
-    plt.ylabel('Failure events')
-    plt.legend()
+    
 
     plt.tight_layout()
     # plt.show()
@@ -153,24 +146,9 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. restorability')
 
-    plt.subplot(2, 3, 5)
-    has_data = False
-    num_routing_policies = len(results.keys())
-    for id_routing_policy, routing_policy in enumerate(results.keys()):
-        num_restoration_policies = len(results[routing_policy].keys())
-        for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
-            if any(results[routing_policy][restoration_policy][load][x]['average_restorability'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
-                range(len(results[routing_policy][restoration_policy][load]))):
-                has_data = True
-                plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
-                                [np.mean([results[routing_policy][restoration_policy][load][x]['average_restorability'] for x in
-                                        range(len(results[routing_policy][restoration_policy][load]))]) for
-                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
-    plt.xlabel('Load [Erlang]')
-    plt.ylabel('Avg. restorability')
-
     total_simulations = num_routing_policies * num_restoration_policies * env.num_seeds
     performed_simulations = np.sum([len(results[p][l]) for p in results.keys() for l in results[p].keys()])
+
     percentage_completed = float(performed_simulations) / float(total_simulations) * 100.
 
     plt.tight_layout()
