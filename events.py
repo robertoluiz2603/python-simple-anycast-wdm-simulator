@@ -18,7 +18,6 @@ def arrival(env: 'Environment', service: 'Service') -> None:
 
     env.setup_next_arrival()  # schedules next arrival
 
-
 def departure(env: 'Environment', service: 'Service') -> None:
     # computing the service time that can be later used to compute availability
     service.service_time = env.current_time - service.arrival_time
@@ -157,7 +156,9 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
         # call the restoration strategy
 
         # post-process the services => compute stats
+        number_lost_services: int = 0
         number_restored_services: int = 0
+        number_relocated_services: int =0
         for service in services_disrupted:
             if service.failed:  # service could not be restored
                 # computing the service time that can be later used to compute availability
@@ -172,21 +173,17 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
         # register statistics such as restorability
         if number_disrupted_services > 0:
             restorability = number_restored_services / number_disrupted_services
-            env.logger.debug(f'Disaster ({count}/{total_links}) at {env.current_time}\tRestorability: {restorability}')
-
-            total_lost += (number_disrupted_services-number_restored_services)
-
+            env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
         # accummulating the totals in the environment object
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
+        env.number_relocated_services += number_relocated_services
     
-    with open("results/check_services.txt", "a") as cs:
-        cs.write("\n\nTotal disrupted: \t")
-        cs.write(str(total_services))
-        cs.write("\nTotal restored: \t")
-        cs.write(str(total_restored))
-        cs.write("\nTotal lost: \t")
-        cs.write(str(total_lost))
+        # TODO: the code below is not thread safe and therefore might have strange formatting
+        with open("results/"+env.output_folder+"/services_restoration.txt", "a") as txt:
+            txt.write(f"\n\nTotal disrupted: \t\t\t{len(services_disrupted)}")
+            txt.write(f"\nTotal restored (relocated): {number_restored_services} ({number_relocated_services})")
+            txt.write(f"\nTotal lost: \t\t\t\t{number_lost_services}")
     
     env.add_event(Event(env.current_time + disaster.duration, disaster_departure, disaster))
   

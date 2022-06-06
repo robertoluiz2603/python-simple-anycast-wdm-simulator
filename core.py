@@ -28,7 +28,6 @@ class Environment:
         self.load: float = 0.0
 
         self.number_disaster_occurences: int = 4
-        self.remaining_disaster_occurences =  self.number_disaster_occurences
 
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
@@ -82,7 +81,8 @@ class Environment:
         if args is not None and hasattr(args, 'threads'):
             self.threads = args.threads
 
-        self.disaster_arrivals_interval = self.num_arrivals/ self.number_disaster_occurences
+        self.disaster_arrivals_interval = self.num_arrivals/ (self.number_disaster_occurences+1)
+        self.next_disaster_point = self.disaster_arrivals_interval
 
         self.topology_file: str = "nobel-us.xml"  #"nobel-us.xml" #"test-topo.xml"
         self.topology_name: str = 'nobel-us'
@@ -200,7 +200,7 @@ class Environment:
         if id_simulation is not None:
             self.id_simulation = id_simulation
 
-        self.remaining_disaster_occurences =  self.number_disaster_occurences
+        self.next_disaster_point = self.disaster_arrivals_interval
 
         # (re)-initialize the graph
         self.topology.graph['running_services'] = []
@@ -282,9 +282,10 @@ class Environment:
                                source=src, 
                                source_id=src_id)
 
-        if(self._processed_arrivals == self.num_arrivals/(self.remaining_disaster_occurences+1) and self.remaining_disaster_occurences>=0):
+        if(self._processed_arrivals == self.next_disaster_point):
             self.setup_next_disaster()
-            self.remaining_disaster_occurences -= 1
+            self.next_disaster_point += self.disaster_arrivals_interval
+            
 
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
@@ -408,7 +409,6 @@ class Environment:
             self.topology[link_src][ link_tgt]['link_failure_probability'] = link.attrib['probability']
 
         at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
-
         duration = self.rng.expovariate(1/self.mean_failure_duration)
         
         disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)

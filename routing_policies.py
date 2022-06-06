@@ -1,4 +1,5 @@
 import abc
+from os import link
 import typing
 import numpy as np
 from typing import Tuple, Optional
@@ -109,6 +110,12 @@ def is_path_viable(topology: 'Graph', path: 'Path', number_network_units: int) -
             return False
     return True
 
+def get_path_risk(topology: 'Graph', path: 'Path'):
+    total_risk = 0
+    for i in range(len(path.node_list) - 1):
+        total_risk += topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'] *\
+             topology[path.node_list[i]][path.node_list[i+1]]['total_units']
+    return total_risk
 
 def get_max_usage(topology: 'Graph', path: 'Path') -> int:
     """
@@ -132,3 +139,19 @@ def get_shortest_path(topology: 'Graph', service: 'Service') -> Optional['Path']
                 closest_path_hops = path.hops
                 closest_path = path
     return closest_path
+
+def get_safest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
+    if service.destination is None:
+        raise ValueError(f"Service should have value for destination, got {service}")
+    closest_path_hops = np.finfo(0.0).max
+    safest_path = None
+    safest_path_risk = 1.0
+    if topology.nodes[service.destination]['available_units'] >= service.computing_units:
+        paths = topology.graph['ksp'][service.source, service.destination]
+        for path in paths:
+            new_path_risk = get_path_risk(topology, path)
+            if is_path_viable(topology, path, service.network_units) and safest_path_risk > new_path_risk and closest_path_hops > path.hops:
+                closest_path_hops = path.hops
+                safest_path_risk = new_path_risk
+                safest_path = path
+    return safest_path
