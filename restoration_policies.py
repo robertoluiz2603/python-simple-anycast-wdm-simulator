@@ -62,10 +62,10 @@ class PathRestorationPolicy(RestorationPolicy):
         # tries to get a path
         #path: Optional['Path'] = routing_policies.get_shortest_path(self.env.topology, service)
         path: Optional['Path'] = routing_policies.get_safest_path(self.env.topology, service)
-
         # if a path was found, sets it and returns true
         if path is not None:
             service.route = path
+            service.expected_risk = routing_policies.get_path_risk(self.env.topology,service.route)
             return True
         # if not, sets None and returns False
         else:

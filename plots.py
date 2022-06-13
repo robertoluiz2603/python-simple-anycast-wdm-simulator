@@ -142,7 +142,8 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                 plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
                                 [np.mean([results[routing_policy][restoration_policy][load][x]['average_restorability'] for x in
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
-                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
+                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", 
+                                marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. restorability')
 
@@ -157,8 +158,8 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
         timedelta = datetime.timedelta(seconds=(time.time() - start_time))
 
     plt.text(0.01, 0.02, 'Progress: {} out of {} ({:.3f} %) / {}'.format(performed_simulations,
-                                                         total_simulations,
-                                                         percentage_completed,
+                                                        total_simulations,
+                                                        percentage_completed,
                                                         timedelta),
                                                         transform=plt.gcf().transFigure,
                                                         fontsize=rcParams['font.size'] - 4.)

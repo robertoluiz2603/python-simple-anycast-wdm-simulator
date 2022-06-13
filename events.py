@@ -154,6 +154,7 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
             env.logger.critical('Not all services were removed')
         
         # call the restoration strategy
+        services_disrupted = env.restoration_policy.restore(services_disrupted)
 
         # post-process the services => compute stats
         number_lost_services: int = 0
@@ -165,9 +166,13 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
                 service.service_time = env.current_time - service.arrival_time
                 # computing the availability <= 1.0
                 service.availability = service.service_time / service.holding_time
+
+                env.total_non_restoration_cost += service.non_restauration_cost
+                
             
             else:  # service could be restored
                 number_restored_services += 1
+                env.expected_non_restoration_cost = env.expected_non_restoration_cost + (service.non_restauration_cost * service.expected_risk)
                 # puts the connection back into the network
         total_restored+=number_restored_services       
         # register statistics such as restorability
@@ -178,7 +183,8 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
         env.number_relocated_services += number_relocated_services
-    
+        env.total_non_restoration_cost = env.total_non_restoration_cost/number_lost_services
+        env.expected_non_restoration_cost = env.expected_non_restoration_cost/ number_restored_services
         # TODO: the code below is not thread safe and therefore might have strange formatting
         with open("results/"+env.output_folder+"/services_restoration.txt", "a") as txt:
             txt.write(f"\n\nTotal disrupted: \t\t\t{len(services_disrupted)}")

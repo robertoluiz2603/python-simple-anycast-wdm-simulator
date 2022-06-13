@@ -27,8 +27,12 @@ class Environment:
 
         self.load: float = 0.0
 
+        self.priority_classes:float = [ 0.000003, 0.00000375]
+        self.expected_non_restoration_cost: float  = 0
+        self.total_non_restoration_cost: float = 0
+        #total number of disaster during a simulation
         self.number_disaster_occurences: int = 4
-
+        
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
         # total number of services restored from failures
@@ -181,6 +185,9 @@ class Environment:
         self._rejected_services = 0
         self.current_time = 0.0
 
+        self.expected_non_restoration_cost: float  = 0
+        self.total_non_restoration_cost: float = 0
+
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
         # total number of services restored from failures
@@ -245,7 +252,7 @@ class Environment:
         ht = self.rng.expovariate(1 / self.mean_service_holding_time)
         src = self.rng.choice([x for x in self.topology.graph['source_nodes']])
         src_id = self.topology.graph['node_indices'].index(src)
-
+        nrc = random.choice(self.priority_classes)
         self._processed_arrivals += 1
 
         if self._processed_arrivals % self.track_stats_every == 0:
@@ -279,6 +286,7 @@ class Environment:
         next_arrival = Service(service_id=self._processed_arrivals, 
                                arrival_time=at, 
                                holding_time=ht,
+                               non_restauration_cost=nrc,
                                source=src, 
                                source_id=src_id)
 
@@ -485,6 +493,8 @@ class Service:
     holding_time: float
     source: str
     source_id: int
+    non_restauration_cost: float
+    expected_risk: float
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)
