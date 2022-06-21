@@ -33,7 +33,7 @@ def run(uargs):
 
     # in this case, a configuration changes only the load of the network
     exec_routing_policies = ['CADC', 'FADC', 'FLB']
-    exec_restoration_policies = ['DNR', 'PR', 'PRwR']
+    exec_restoration_policies = ['DNR', 'PR', 'PRwR', 'PRCA']
     loads = [x for x in range(args.min_load, args.max_load + 1, args.load_step)]
 
     final_output_folder = env.output_folder + '/' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fUTC')
@@ -94,6 +94,8 @@ def run(uargs):
                     restoration_policy_instance = restoration_policies.PathRestorationPolicy()
                 elif restoration_policy == 'PRwR':
                     restoration_policy_instance = restoration_policies.PathRestorationWithRelocationPolicy()
+                elif restoration_policy == 'PRCA':
+                    restoration_policy_instance = restoration_policies.PathRestorationCascadeProbabilities()
                 else:
                     raise ValueError('Restoration policy was not configured correctly (value set to {})'.format(restoration_policy))
 

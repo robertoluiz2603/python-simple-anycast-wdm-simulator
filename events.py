@@ -81,6 +81,8 @@ def link_failure_arrival(env: 'Environment', failure: 'LinkFailure') -> None:
             restorability = number_restored_services / number_disrupted_services
             env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
         # accummulating the totals in the environment object
+
+
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
         env.number_relocated_services += number_relocated_services
@@ -119,10 +121,13 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     link = []
 
     for node in disaster.nodes:
-        env.topology.nodes[node]['failed'] = True
-
+        env.topology.nodes[node]['failed'] = True  
+        
     
     for link_failure in disaster.links:
+
+        print("A")
+        print(link_failure)
         count +=1
         link = link_failure
         env.topology[link[0]][link[1]]['failed'] = True
@@ -138,6 +143,7 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
         env.logger.debug(f'Disaster ({count}/{total_links}) Link: {link}\tfor {number_disrupted_services} services')
 
         for service in services_disrupted:
+            
             # release all resources used
             env.logger.debug(f'Releasing resources for service {service}')
             env.release_path(service)
@@ -155,42 +161,56 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
         
         # call the restoration strategy
         services_disrupted = env.restoration_policy.restore(services_disrupted)
-
+        
         # post-process the services => compute stats
         number_lost_services: int = 0
         number_restored_services: int = 0
         number_relocated_services: int =0
+        expected_capacity_loss: float = 0
+        loss_cost: float = 0
+        expected_loss_cost: float = 0
+
         for service in services_disrupted:
-            if service.failed:  # service could not be restored
+            expected_capacity_loss += service.expected_risk
+            if service.failed: 
+                # service could not be restored
                 # computing the service time that can be later used to compute availability
                 service.service_time = env.current_time - service.arrival_time
                 # computing the availability <= 1.0
                 service.availability = service.service_time / service.holding_time
 
-                env.total_non_restoration_cost += service.non_restauration_cost
-                
+                loss_cost += service.loss_cost    
+
+                number_lost_services+=1           
             
             else:  # service could be restored
+                expected_loss_cost += service.expected_risk * service.expected_loss_cost
                 number_restored_services += 1
-                env.expected_non_restoration_cost = env.expected_non_restoration_cost + (service.non_restauration_cost * service.expected_risk)
-                # puts the connection back into the network
+                # puts the connection back into the network            
+            
         total_restored+=number_restored_services       
         # register statistics such as restorability
+        
         if number_disrupted_services > 0:
             restorability = number_restored_services / number_disrupted_services
             env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
+            env.expected_capacity_loss += expected_capacity_loss/number_disrupted_services
+        if number_lost_services > 0:
+            env.total_loss_cost += loss_cost/number_lost_services
+        if number_restored_services > 0:
+            env.total_expected_loss_cost += expected_loss_cost/number_restored_services
+
         # accummulating the totals in the environment object
         env.number_disrupted_services += number_disrupted_services
         env.number_restored_services += number_restored_services
-        env.number_relocated_services += number_relocated_services
-        env.total_non_restoration_cost = env.total_non_restoration_cost/number_lost_services
-        env.expected_non_restoration_cost = env.expected_non_restoration_cost/ number_restored_services
+        env.number_relocated_services += number_relocated_services      
+        
         # TODO: the code below is not thread safe and therefore might have strange formatting
         with open("results/"+env.output_folder+"/services_restoration.txt", "a") as txt:
             txt.write(f"\n\nTotal disrupted: \t\t\t{len(services_disrupted)}")
             txt.write(f"\nTotal restored (relocated): {number_restored_services} ({number_relocated_services})")
             txt.write(f"\nTotal lost: \t\t\t\t{number_lost_services}")
-    
+               
     env.add_event(Event(env.current_time + disaster.duration, disaster_departure, disaster))
   
 
@@ -202,8 +222,7 @@ def disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
     env.tracked_results['link_disaster_departures'].append(env.current_time)
 
     # put the link back in a working state
-    for link_failure in disaster.links:
-        link = link_failure
+    for link in disaster.links:
         env.topology[link[0]][link[1]]['failed'] = False
 
     for node in disaster.nodes:

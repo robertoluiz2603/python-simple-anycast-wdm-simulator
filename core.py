@@ -28,8 +28,13 @@ class Environment:
         self.load: float = 0.0
 
         self.priority_classes:float = [ 0.000003, 0.00000375]
-        self.expected_non_restoration_cost: float  = 0
-        self.total_non_restoration_cost: float = 0
+
+        self.total_expected_loss_cost: float  = 0
+
+        self.total_loss_cost: float = 0
+
+        self.expected_capacity_loss: float = 0
+
         #total number of disaster during a simulation
         self.number_disaster_occurences: int = 4
         
@@ -135,7 +140,8 @@ class Environment:
         self.tracked_results: dict = {}
         self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
                                         'average_availability', 'average_restorability', 'link_failure_arrivals', 
-                                        'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures', 'average_relocation']
+                                        'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures', 'average_relocation',
+                                        'expected_capacity_loss', 'avg_loss_cost', 'avg_expected_loss_cost']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -176,7 +182,10 @@ class Environment:
             # TODO: add statistics about failures
             'average_restorability': self.number_restored_services / self.number_disrupted_services,
             'average_availability': total_service_time / total_holding_time,
-            'average_relocation': self.number_relocated_services / self.number_disrupted_services
+            'average_relocation': self.number_relocated_services / self.number_disrupted_services,
+            'expected_capacity_loss': self.expected_capacity_loss,
+            'avg_loss_cost': self.total_loss_cost,
+            'avg_expected_loss_cost': self.expected_capacity_loss
         })
 
     def reset(self, seed=None, id_simulation=None):
@@ -185,8 +194,11 @@ class Environment:
         self._rejected_services = 0
         self.current_time = 0.0
 
-        self.expected_non_restoration_cost: float  = 0
-        self.total_non_restoration_cost: float = 0
+        self.total_expected_loss_cost: float  = 0
+
+        self.total_loss_cost: float = 0
+
+        self.expected_capacity_loss: float = 0
 
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
@@ -207,7 +219,7 @@ class Environment:
         if id_simulation is not None:
             self.id_simulation = id_simulation
 
-        self.next_disaster_point = self.disaster_arrivals_interval
+        #self.next_disaster_point = self.disaster_arrivals_interval
 
         # (re)-initialize the graph
         self.topology.graph['running_services'] = []
@@ -252,7 +264,7 @@ class Environment:
         ht = self.rng.expovariate(1 / self.mean_service_holding_time)
         src = self.rng.choice([x for x in self.topology.graph['source_nodes']])
         src_id = self.topology.graph['node_indices'].index(src)
-        nrc = random.choice(self.priority_classes)
+        cost = random.choice(self.priority_classes)
         self._processed_arrivals += 1
 
         if self._processed_arrivals % self.track_stats_every == 0:
@@ -286,14 +298,14 @@ class Environment:
         next_arrival = Service(service_id=self._processed_arrivals, 
                                arrival_time=at, 
                                holding_time=ht,
-                               non_restauration_cost=nrc,
+                               loss_cost=cost,
+                               expected_loss_cost=cost*2,
                                source=src, 
                                source_id=src_id)
 
         if(self._processed_arrivals == self.next_disaster_point):
             self.setup_next_disaster()
             self.next_disaster_point += self.disaster_arrivals_interval
-            
 
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
@@ -376,7 +388,8 @@ class Environment:
         failure = LinkFailure(link, at, duration)
 
         self.add_event(Event(failure.arrival_time, events.link_failure_arrival, failure))
-    
+
+   
     def setup_next_disaster(self):
         if self._processed_arrivals > self.num_arrivals:
             return
@@ -421,7 +434,7 @@ class Environment:
         
         disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
         self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
-            
+
     def _update_link_stats(self, node1, node2):
         """
         Updates link statistics following a time-weighted manner.
@@ -493,8 +506,9 @@ class Service:
     holding_time: float
     source: str
     source_id: int
-    non_restauration_cost: float
-    expected_risk: float
+    loss_cost: float = 0.0
+    expected_loss_cost: float = 0.0
+    expected_risk: float = 0.0
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)
@@ -505,7 +519,6 @@ class Service:
     provisioned: bool = field(default=False)
     failed: bool = field(default=False)
     relocated: bool = field(default=False)
-
     
     def __repr__(self) -> str:
         return f'<Service {self.service_id}, {self.source} -> {self.destination}>'
