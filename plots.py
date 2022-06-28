@@ -24,7 +24,7 @@ def plot_simulation_progress(env: 'Environment'):
     """
     Plots results for a particular configuration.
     """
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(12, 9))
 
     plt.subplot(3, 3, 1)
     if any(i > 0 for i in env.tracked_results['request_blocking_ratio']):
@@ -95,7 +95,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     """
     markers = ['', 'x', 'o']
     line_styles = ['-', '--', ':']
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(12, 9))
     plt.subplot(3, 3, 1)
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -270,3 +270,4 @@ def plot_topology(env: 'Environment', args):
     for format in env.plot_formats:
         plt.savefig(f'./results/{env.output_folder}/topology_{env.topology_name}.{format}')
     plt.close() # avoids too many figures opened at once
+    print("plot topology")

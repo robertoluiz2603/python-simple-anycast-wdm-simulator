@@ -61,16 +61,16 @@ class PathRestorationPolicy(RestorationPolicy):
         
         # tries to get a path
         path: Optional['Path'] = routing_policies.get_shortest_path(self.env.topology, service)
-        #path: Optional['Path'] = routing_policies.get_safest_path(self.env.topology, service)
 
         # if a path was found, sets it and returns true
         if path is not None:
             service.route = path
-            service.expected_risk = routing_policies.get_path_risk(self.env.topology,service.route)
+            print ("Encontrou caminho")
             return True
         # if not, sets None and returns False
         else:
             service.route = None
+            print("Nao encontrou caminho")
             return False
 
     def restore(self, services: Sequence['Service']):
@@ -118,9 +118,11 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
         success, dc, path = self.env.routing_policy.route(service)
         if success:
             service.route = path
+            print("Realocou")
             return True
         else:
             service.route = None
+            print("Nao realocou")
             return False
 
     def restore(self, services: Sequence['Service']):
@@ -141,73 +143,23 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
             return services
         '''
         for service in services:
+            print('trying', service)
             if self.restore_path(service):  # inherits this method from PathRestorationPolicy
                 service.failed = False
                 restored_services += 1
                 self.env.provision_service(service)
+                service.expected_risk = routing_policies.get_path_risk(self.env.topology, service.route)
             elif self.relocate_restore_path(service):
                 service.failed = False
                 service.relocated = True
                 restored_services += 1
                 relocated_services += 1
                 self.env.provision_service(service)
+                service.expected_risk = routing_policies.get_path_risk(self.env.topology, service.route)
             else:  # no alternative was found
                 self.drop_service(service)
+                failed_services+=1
+            
+        print("perdidos: ")
+        print(failed_services)
         return services
-
-class PathRestorationCascadeProbabilities(RestorationPolicy):
-    def __init__(self) -> None:
-        super().__init__()
-        self.name = 'PRCA'
-    
-    def restore_path(self, service: 'Service') -> bool:
-        """
-        Method that tries to restore a service to the same datacenter
-        it is currently associated with.
-
-        Args:
-            service (Service): _description_
-
-        Returns:
-            bool: _description_
-        """
-        
-        # tries to get a path
-        #path: Optional['Path'] = routing_policies.get_shortest_path(self.env.topology, service)
-        path: Optional['Path'] = routing_policies.get_safest_path(self.env.topology, service)
-
-        # if a path was found, sets it and returns true
-        if path is not None:
-            service.route = path
-            service.expected_risk= routing_policies.get_path_risk(self.env.topology,service.route)
-            return True
-        # if not, sets None and returns False
-        else:
-            service.route = None
-            return False
-
-    def restore(self, services: Sequence['Service']):
-        # TODO: implement the method
-        restored_services = 0 
-        relocated_services = 0
-        failed_services = 0
-        
-        # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
-        services = sorted(services, key=lambda x: x.holding_time - (self.env.current_time - x.arrival_time))
-        '''
-        if(services != None):
-            print("remaining time: ")
-            for service in services:
-                print(service.remaining_time)
-        else:
-            return services
-        '''
-        for service in services:
-            if self.restore_path(service):
-                service.failed = False
-                restored_services += 1
-                self.env.provision_service(service)
-            else:  # no alternative was found
-                self.drop_service(service)
-        return services
-

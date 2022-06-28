@@ -32,8 +32,10 @@ def run(uargs):
     logger = logging.getLogger('run')
 
     # in this case, a configuration changes only the load of the network
-    exec_routing_policies = ['CADC', 'FADC', 'FLB']
-    exec_restoration_policies = ['DNR', 'PR', 'PRwR', 'PRCA']
+    #, 'FADC', 'FLB'
+    exec_routing_policies = ['CADC']
+    #'PR','DNR',,'PRCA'
+    exec_restoration_policies = ['PRwR']
     loads = [x for x in range(args.min_load, args.max_load + 1, args.load_step)]
 
     final_output_folder = env.output_folder + '/' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fUTC')
@@ -81,21 +83,21 @@ def run(uargs):
 
                 if routing_policy == 'CADC':
                     routing_policy_instance = routing_policies.ClosestAvailableDC()
-                elif routing_policy == 'FADC':
-                    routing_policy_instance = routing_policies.FarthestAvailableDC()
-                elif routing_policy == 'FLB':
-                    routing_policy_instance = routing_policies.FullLoadBalancing()
+                #elif routing_policy == 'FADC':
+                #    routing_policy_instance = routing_policies.FarthestAvailableDC()
+                #elif routing_policy == 'FLB':
+                #    routing_policy_instance = routing_policies.FullLoadBalancing()
                 else:
                     raise ValueError('Routing policy was not configured correctly (value set to {})'.format(routing_policy))
 
-                if restoration_policy == 'DNR':
-                    restoration_policy_instance = restoration_policies.DoNotRestorePolicy()
-                elif restoration_policy == 'PR':
-                    restoration_policy_instance = restoration_policies.PathRestorationPolicy()
-                elif restoration_policy == 'PRwR':
+                #if restoration_policy == 'DNR':
+                #    restoration_policy_instance = restoration_policies.DoNotRestorePolicy()
+                #elif restoration_policy == 'PR':
+                #    restoration_policy_instance = restoration_policies.PathRestorationPolicy()
+                if restoration_policy == 'PRwR':
                     restoration_policy_instance = restoration_policies.PathRestorationWithRelocationPolicy()
-                elif restoration_policy == 'PRCA':
-                    restoration_policy_instance = restoration_policies.PathRestorationCascadeProbabilities()
+                #elif restoration_policy == 'PRCA':
+                #    restoration_policy_instance = restoration_policies.PathRestorationCascadeProbabilities()
                 else:
                     raise ValueError('Restoration policy was not configured correctly (value set to {})'.format(restoration_policy))
 
@@ -112,9 +114,9 @@ def run(uargs):
                 # code for debugging purposes -- it runs without multithreading
                 
                 # if load == 600 and routing_policy == 'CADC':
-                #    core.run_simulation(env_t)
-                #    print("Ran in debug mode... exiting...")
-                #    exit(0)
+                core.run_simulation(env_t)
+                print("Ran in debug mode... exiting...")
+                exit(0)
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses

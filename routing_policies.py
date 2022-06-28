@@ -1,5 +1,4 @@
 import abc
-from os import link
 import typing
 import numpy as np
 from typing import Tuple, Optional
@@ -110,12 +109,6 @@ def is_path_viable(topology: 'Graph', path: 'Path', number_network_units: int) -
             return False
     return True
 
-def get_path_risk(topology: 'Graph', path: 'Path'):
-    total_risk = 0
-    for i in range(len(path.node_list) - 1):
-        total_risk += topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'] *\
-             topology[path.node_list[i]][path.node_list[i+1]]['total_units']
-    return total_risk
 
 def get_max_usage(topology: 'Graph', path: 'Path') -> int:
     """
@@ -126,6 +119,18 @@ def get_max_usage(topology: 'Graph', path: 'Path') -> int:
         max_usage = max(max_usage, topology[path.node_list[i]][path.node_list[i + 1]]['total_units'] - topology[path.node_list[i]][path.node_list[i + 1]]['available_units'])
     return max_usage
 
+def get_path_risk(topology: 'Graph', path: 'Path'):
+    aecl:float = 0.0
+    print("get_path_risk")
+    for i in range(len(path.node_list) - 1):
+        print("entrou")
+        x = topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability']
+        y = topology[path.node_list[i]][path.node_list[i+1]]['total_units']
+        aecl += topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'] *topology[path.node_list[i]][path.node_list[i+1]]['total_units']
+        print(topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'])
+        print(topology[path.node_list[i]][path.node_list[i + 1]]['total_units'])
+    print("saiu")
+    return aecl / (len(path.node_list) - 1)
 
 def get_shortest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
     if service.destination is None:

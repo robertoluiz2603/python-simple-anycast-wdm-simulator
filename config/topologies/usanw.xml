@@ -855,34 +855,9 @@
 <disaster_zones>
   <zone id = 'Z1'>
     <region id = 'R0'>
-      <disaster_link probability = '1.0'>L94</disaster_link>
-      <disaster_link probability = '1.0'>L95</disaster_link>
-      <disaster_link probability = '1.0'>L65</disaster_link>
-      <disaster_node probability = '1.0'>San_Jose</disaster_node>
-      <disaster_node probability = '1.0'>San_Francisco</disaster_node>
-      <disaster_node probability = '1.0'>Sacramento</disaster_node>    
-      <disaster_node probability = '1.0'>Fresno</disaster_node>
-      <disaster_node probability = '1.0'>Santa_Barbara</disaster_node>
-      <disaster_node probability = '1.0'>Los_Angeles</disaster_node>
+	    <disaster_link probability = '1.0'>L5</disaster_link>
+      	<disaster_link probability = '1.0'>L40</disaster_link>
     </region>
-    <region id = 'R1'>
-      <disaster_link probability = '0.7'>L64 </disaster_link>
-      <disaster_link probability = '0.7'>L48</disaster_link>
-      <disaster_link probability = '0.7'>L89</disaster_link>
-      <disaster_node probability = '0.7'>San_Diego</disaster_node>
-      <disaster_node probability = '0.7'>Las_Vegas</disaster_node>
-      <disaster_node probability = '0.7'>Portland</disaster_node>
-    </region>
-    <region id = 'R2'>
-      <disaster_link probability = '0.15'>L61</disaster_link>
-      <disaster_link probability = '0.15'>L90</disaster_link>
-      <disaster_link probability = '0.15'>L60</disaster_link>
-      <disaster_link probability = '0.15'>L86</disaster_link>
-      <disaster_link probability = '0.15'>L87</disaster_link>
-      <disaster_node probability = '0.15'>Phoenix</disaster_node>
-      <disaster_node probability = '0.15'>Seattle</disaster_node>
-      <disaster_node probability = '0.15'>Salt_Lake_City</disaster_node>
-    </region>   
   </zone>
 </disaster_zones>
 </network>

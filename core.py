@@ -65,7 +65,7 @@ class Environment:
             self.num_seeds = args.num_seeds
 
         # defines the number of DCs to be placed in the topology
-        self.num_dcs: int = 2
+        self.num_dcs: int = 4
         if args is not None and hasattr(args, "num_dcs"):
             self.num_dcs = args.num_dcs
 
@@ -236,17 +236,18 @@ class Environment:
             if self.topology.nodes[node]['dc']:
                 #self.topology.nodes[node]['available_units'] = self.topology.degree(node) * self.resource_units_per_link
                 #self.topology.nodes[node]['total_units'] = self.topology.degree(node) * self.resource_units_per_link
-                self.topology.nodes[node]['available_units'] = 900
-                self.topology.nodes[node]['total_units'] = 900
+                self.topology.nodes[node]['available_units'] = 1800
+                self.topology.nodes[node]['total_units'] = 1800
                 self.topology.nodes[node]['services'] = []
                 self.topology.nodes[node]['running_services'] = []
                 self.topology.nodes[node]['id'] = idx
                 self.topology.nodes[node]['utilization'] = 0.0
                 self.topology.nodes[node]['last_update'] = 0.0
-                self.topology.nodes[node]['total_storage'] =0
+                self.topology.nodes[node]['total_storage'] = 0
                 self.topology.nodes[node]['available_storage'] = 0
                 self.topology.nodes[node]['node_failure_probability'] =0
             else:
+                self.topology.nodes[node]['node_failure_probability'] =0
                 self.topology.nodes[node]['available_units'] = 0
                 self.topology.nodes[node]['total_units'] = 0        
 
@@ -420,14 +421,14 @@ class Environment:
 
         #Sets the probability of nodes in danger regions failing
         for node in root.findall(".//zone[@id='"+zone_to_fail+"']/region/disaster_node"):
-            self.topology.nodes[node.text]['node_failure_probability'] = node.attrib['probability']
+            self.topology.nodes[node.text]['node_failure_probability'] =float(node.attrib['probability'])
              
         for link in root.findall(".//zone[@id='"+zone_to_fail+"']/region/disaster_link"):
             for src in root.findall(".//link[@id='"+link.text+"']/source"):
                 link_src = src.text
             for tgt in root.findall(".//link[@id='"+link.text+"']/target"):
                 link_tgt = tgt.text
-            self.topology[link_src][ link_tgt]['link_failure_probability'] = link.attrib['probability']
+            self.topology[link_src][ link_tgt]['link_failure_probability'] = float(link.attrib['probability'])
 
         at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
         duration = self.rng.expovariate(1/self.mean_failure_duration)

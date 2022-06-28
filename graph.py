@@ -124,10 +124,24 @@ def get_dcs(args, topology):
     topology.graph['dcs'] = []
     if args.dc_placement == 'degree':
         degree = sorted(topology.degree(), key=itemgetter(1), reverse=True)
+        """
         for i in range(args.num_dcs):
             node = degree[i][0]
             topology.graph['dcs'].append(node)
             topology.nodes[node]['dc'] = True
+            print(node)
+        """
+        node = "Dallas"
+        topology.graph['dcs'].append(node)
+        topology.nodes[node]['dc'] = True
+        node = "New_York"
+        topology.graph['dcs'].append(node)
+        topology.nodes[node]['dc'] = True
+        node = "San_Francisco"
+        topology.graph['dcs'].append(node)
+        topology.nodes[node]['dc'] = True
+
+        print(topology.graph['dcs'])
         for i in range(args.num_dcs, topology.number_of_nodes()):
             node = degree[i][0]
             topology.graph['source_nodes'].append(node)
