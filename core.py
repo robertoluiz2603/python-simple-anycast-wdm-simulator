@@ -33,10 +33,10 @@ class Environment:
 
         self.total_loss_cost: float = 0
 
-        self.expected_capacity_loss: float = 0
+        self.total_expected_capacity_loss: float = 0
 
         #total number of disaster during a simulation
-        self.number_disaster_occurences: int = 4
+        self.number_disaster_occurences: int = 19
         
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
@@ -90,9 +90,10 @@ class Environment:
         if args is not None and hasattr(args, 'threads'):
             self.threads = args.threads
 
-        self.disaster_arrivals_interval = self.num_arrivals/ (self.number_disaster_occurences+1)
-        self.next_disaster_point = self.disaster_arrivals_interval
+        self.disaster_arrivals_interval:int = int(self.num_arrivals/ (self.number_disaster_occurences+1))
+        self.next_disaster_point:int = int(self.disaster_arrivals_interval)
 
+        print("Primeiro desastre em ", self.next_disaster_point)
         self.topology_file: str = "nobel-us.xml"  #"nobel-us.xml" #"test-topo.xml"
         self.topology_name: str = 'nobel-us'
         # self.topology_file = "simple"  # "nobel-us.xml" #"test-topo.xml"
@@ -141,7 +142,7 @@ class Environment:
         self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
                                         'average_availability', 'average_restorability', 'link_failure_arrivals', 
                                         'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures', 'average_relocation',
-                                        'expected_capacity_loss', 'avg_loss_cost', 'avg_expected_loss_cost']
+                                        'avg_expected_capacity_loss', 'avg_loss_cost', 'avg_expected_loss_cost']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -179,13 +180,12 @@ class Environment:
             'individual_link_usage': [self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()],
             'average_node_usage': np.mean([self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']]),
             'individual_node_usage': {node: self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']},
-            # TODO: add statistics about failures
-            'average_restorability': self.number_restored_services / self.number_disrupted_services,
             'average_availability': total_service_time / total_holding_time,
+            'average_restorability': self.number_restored_services / self.number_disrupted_services,
             'average_relocation': self.number_relocated_services / self.number_disrupted_services,
-            'expected_capacity_loss': self.expected_capacity_loss,
-            'avg_loss_cost': self.total_loss_cost,
-            'avg_expected_loss_cost': self.expected_capacity_loss
+            'avg_loss_cost': self.total_loss_cost/self.number_disrupted_services,
+            'avg_expected_loss_cost': self.total_expected_loss_cost/self.number_disrupted_services,
+            'avg_expected_capacity_loss': self.total_expected_capacity_loss/self.number_disrupted_services,
         })
 
     def reset(self, seed=None, id_simulation=None):
@@ -198,7 +198,7 @@ class Environment:
 
         self.total_loss_cost: float = 0
 
-        self.expected_capacity_loss: float = 0
+        self.total_expected_capacity_loss: float = 0
 
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
@@ -219,7 +219,7 @@ class Environment:
         if id_simulation is not None:
             self.id_simulation = id_simulation
 
-        #self.next_disaster_point = self.disaster_arrivals_interval
+        self.next_disaster_point = self.disaster_arrivals_interval
 
         # (re)-initialize the graph
         self.topology.graph['running_services'] = []
@@ -265,7 +265,7 @@ class Environment:
         ht = self.rng.expovariate(1 / self.mean_service_holding_time)
         src = self.rng.choice([x for x in self.topology.graph['source_nodes']])
         src_id = self.topology.graph['node_indices'].index(src)
-        cost = random.choice(self.priority_classes)
+        cost = float(random.choice(self.priority_classes))
         self._processed_arrivals += 1
 
         if self._processed_arrivals % self.track_stats_every == 0:
@@ -286,24 +286,31 @@ class Environment:
                 if service.provisioned and service.service_time is not None:  # only the services which already left the system, i.e., have a service time
                     total_service_time += service.service_time
                     total_holding_time += service.holding_time
-            self.tracked_results['average_availability'].append(total_service_time / total_holding_time)
+            if total_holding_time!=0:
+                self.tracked_results['average_availability'].append(total_service_time / total_holding_time)
             if self.number_disrupted_services > 0:  # avoid division by zero
                 self.tracked_results['average_restorability'].append(self.number_restored_services / self.number_disrupted_services)
                 self.tracked_results['average_relocation'].append(self.number_relocated_services / self.number_disrupted_services)
+                self.tracked_results['avg_expected_capacity_loss'].append(self.total_expected_capacity_loss / self.number_disrupted_services)
+                self.tracked_results['avg_expected_loss_cost'].append(self.total_expected_loss_cost/self.number_disrupted_services)
+                self.tracked_results['avg_loss_cost'].append(self.total_loss_cost/self.number_disrupted_services)
             else:  # if no failures, 100% restorability
+                self.tracked_results['avg_loss_cost'].append(0.0)
                 self.tracked_results['average_restorability'].append(1.)
+                self.tracked_results['average_relocation'].append(0.0)
+                self.tracked_results['avg_expected_capacity_loss'].append(0.0)
+                self.tracked_results['avg_expected_loss_cost'].append(0.0) 
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
             plots.plot_simulation_progress(self)
 
-        #TODO: number of units necessary can also be randomly selected, now it's always one
         next_arrival = Service(service_id=self._processed_arrivals, 
                                arrival_time=at, 
                                holding_time=ht,
                                loss_cost=cost,
                                expected_loss_cost=cost*2,
                                source=src, 
-                               source_id=src_id)
-
+                               source_id=src_id,
+                               computing_units=random.randint(1, 5))
         if(self._processed_arrivals == self.next_disaster_point):
             self.setup_next_disaster()
             self.next_disaster_point += self.disaster_arrivals_interval
@@ -400,8 +407,8 @@ class Environment:
         nodes_to_fail=[]
         link_src = ""
         link_tgt = ""
-        topologie_file = 'config/topologies/usanw.xml'
-        elementTree = ET.parse(topologie_file)
+        tfpath = "config/topologies/"+self.topology_file
+        elementTree = ET.parse(tfpath)
         root = elementTree.getroot()
         for z in root.findall(".//zone"):
             zones.append(z.attrib['id'])
@@ -418,7 +425,7 @@ class Environment:
         #Appends links in epicenter to nodes_to_fail list    
         for nf in root.findall(".//zone[@id='"+zone_to_fail+"']/region[@id='R0']/disaster_node"):
             nodes_to_fail.append(nf.text)
-
+        print(nodes_to_fail)
         #Sets the probability of nodes in danger regions failing
         for node in root.findall(".//zone[@id='"+zone_to_fail+"']/region/disaster_node"):
             self.topology.nodes[node.text]['node_failure_probability'] =float(node.attrib['probability'])
@@ -428,7 +435,7 @@ class Environment:
                 link_src = src.text
             for tgt in root.findall(".//link[@id='"+link.text+"']/target"):
                 link_tgt = tgt.text
-            self.topology[link_src][ link_tgt]['link_failure_probability'] = float(link.attrib['probability'])
+            self.topology[link_src][link_tgt]['link_failure_probability'] = float(link.attrib['probability'])
 
         at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
         duration = self.rng.expovariate(1/self.mean_failure_duration)

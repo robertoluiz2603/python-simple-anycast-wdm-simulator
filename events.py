@@ -185,22 +185,23 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     if number_disrupted_services > 0:
         restorability = number_restored_services / number_disrupted_services
         env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
-    env.expected_capacity_loss += expected_capacity_loss
+    
     env.number_disrupted_services += number_disrupted_services
+    env.total_expected_capacity_loss += expected_capacity_loss
     env.total_loss_cost += loss_cost
     env.total_expected_loss_cost += expected_loss_cost
     env.number_restored_services += number_restored_services
     env.number_relocated_services += number_relocated_services 
     
     print("AECL: ")
-    print(env.expected_capacity_loss)  
+    print(env.total_expected_capacity_loss)  
     
     # TODO: the code below is not thread safe and therefore might have strange formatting
     with open("results/"+env.output_folder+"/services_restoration.txt", "a") as txt:
         txt.write(f"\n\nTotal disrupted: \t\t\t{len(services_disrupted)}")
         txt.write(f"\nTotal restored (relocated): {number_restored_services} ({number_relocated_services})")
         txt.write(f"\nTotal lost: \t\t\t\t{number_lost_services}")
-        txt.write(f"\nAECL: \t\t\t\t{env.expected_capacity_loss}")
+        txt.write(f"\nAECL: \t\t\t\t{env.total_expected_capacity_loss}")
                
     env.add_event(Event(env.current_time + disaster.duration, disaster_departure, disaster))
   

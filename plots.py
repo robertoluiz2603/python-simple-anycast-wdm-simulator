@@ -24,7 +24,7 @@ def plot_simulation_progress(env: 'Environment'):
     """
     Plots results for a particular configuration.
     """
-    plt.figure(figsize=(12, 9))
+    plt.figure(figsize=(20, 9))
 
     plt.subplot(3, 3, 1)
     if any(i > 0 for i in env.tracked_results['request_blocking_ratio']):
@@ -63,8 +63,8 @@ def plot_simulation_progress(env: 'Environment'):
     plt.ylabel('DCs avg. relocation')
 
     plt.subplot(3, 3, 7)
-    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['expected_capacity_loss'])+1)],
-                 env.tracked_results['expected_capacity_loss'])
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['avg_expected_loss_cost'])+1)],
+                 env.tracked_results['avg_expected_loss_cost'])
     plt.xlabel('Arrival')
     plt.ylabel('Expected capacity loss')
     plt.subplot(3, 3, 8)
@@ -93,8 +93,8 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     """
     Consolidates the statistics and plots it periodically and at the end of all simulations.
     """
-    markers = ['', 'x', 'o']
-    line_styles = ['-', '--', ':']
+    markers = ['', 'x', 'o', '*']
+    line_styles = ['-', '--', ':', '-.']
     plt.figure(figsize=(12, 9))
     plt.subplot(3, 3, 1)
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -187,15 +187,15 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
-            if any(results[routing_policy][restoration_policy][load][x]['expected_capacity_loss'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
+            if any(results[routing_policy][restoration_policy][load][x]['avg_expected_loss_cost'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
                 range(len(results[routing_policy][restoration_policy][load]))):
                 has_data = True
                 plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
-                                [np.mean([results[routing_policy][restoration_policy][load][x]['expected_capacity_loss'] for x in
+                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_expected_loss_cost'] for x in
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
-    plt.ylabel('Avg. expected_capacity_loss')
+    plt.ylabel('Avg. expected capacity loss')
     plt.subplot(3, 3, 8)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -250,7 +250,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
 
 
 def plot_topology(env: 'Environment', args):
-
+    bbox = dict(boxstyle ="round", fc ="0.7", alpha=0.4)
     plt.figure()
     plt.axis('off')
     pos = nx.get_node_attributes(env.topology, 'pos')
@@ -260,12 +260,20 @@ def plot_topology(env: 'Environment', args):
     # using scatter rather than nx.draw_networkx_nodes to be able to have a legend in the topology
     nodes_x = [pos[x][0] for x in env.topology.graph['source_nodes']]
     nodes_y = [pos[x][1] for x in env.topology.graph['source_nodes']]
+    for idx, node in enumerate(env.topology.graph['source_nodes']):
+        ajust = len(node)/2.5
+        plt.annotate(node, (nodes_x[idx]-ajust, nodes_y[idx]-1), fontsize=5)
     plt.scatter(nodes_x, nodes_y, label='Node', color='blue', alpha=1., marker='o', linewidths=1., edgecolors='black', s=160.)
-
     nodes_x = [pos[x][0] for x in env.topology.graph['dcs']]
     nodes_y = [pos[x][1] for x in env.topology.graph['dcs']]
-    plt.scatter(nodes_x, nodes_y, label='DC', color='red', alpha=1., marker='s', linewidths=1., edgecolors='black', s=200.)
+    plt.scatter(nodes_x, nodes_y, label='DC', color='red', alpha=1., marker='s', linewidths=1., edgecolors='black',s=200.)
+    
+    #Writes dc's name under it
+    for idx, dc in enumerate(env.topology.graph['dcs']):
+        ajust = len(dc)/2.5
+        plt.annotate(dc, (nodes_x[idx]-ajust, nodes_y[idx]-1.1),  bbox = bbox, fontsize=7)
 
+        
     plt.legend(loc=1)
     for format in env.plot_formats:
         plt.savefig(f'./results/{env.output_folder}/topology_{env.topology_name}.{format}')
