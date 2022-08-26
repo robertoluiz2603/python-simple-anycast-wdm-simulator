@@ -159,6 +159,9 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     expected_capacity_loss: float = 0
     loss_cost: float = 0
     expected_loss_cost: float = 0
+    number_hops_disrupted = 0
+    number_hops_restaured = 0
+    number_hops_relocation = 0
     for service in services_disrupted:
         expected_capacity_loss += service.expected_risk
         if service.failed!=True: 
@@ -166,9 +169,12 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
             expected_loss_cost += service.expected_risk * service.expected_loss_cost
             number_restored_services += 1
             # puts the connection back into the network         
-            
+            if(service.route != None):
+                number_hops_restaured += service.route.hops
             if service.relocated:
                 number_relocated_services+=1
+                if(service.route != None):
+                    number_hops_relocation += service.route.hops
         
         else:    
             # service could not be restored
@@ -177,8 +183,10 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
             # computing the availability <= 1.0
             service.availability = service.service_time / service.holding_time
             loss_cost += service.loss_cost    
-            number_lost_services+=1        
-    
+            number_lost_services+=1     
+        if(service.route != None):
+            number_hops_disrupted += service.route.hops
+        
     # register statistics such as restorability
     
     # accummulating the totals in the environment object
@@ -192,6 +200,9 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     env.total_expected_loss_cost += expected_loss_cost
     env.number_restored_services += number_restored_services
     env.number_relocated_services += number_relocated_services 
+    env.total_hops_disrupted_services += number_hops_disrupted
+    env.total_hops_restaured_services += number_hops_restaured
+    env.total_hops_relocated_services += number_hops_relocation
     
     print("AECL: ")
     print(env.total_expected_capacity_loss)  

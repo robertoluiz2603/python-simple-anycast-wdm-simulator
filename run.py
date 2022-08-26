@@ -34,8 +34,8 @@ def run(uargs):
     # in this case, a configuration changes only the load of the network
     #, 'FADC', 'FLB'
     exec_routing_policies = ['CADC']
-    #'PR','DNR',,'PRCA'
-    exec_restoration_policies = ['PRwR', 'PRPA', 'PR', 'DNR']
+    #'PR','DNR','PRCA'
+    exec_restoration_policies = ['PRPA','PRwR']
     loads = [x for x in range(args.min_load, args.max_load + 1, args.load_step)]
 
     final_output_folder = env.output_folder + '/' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fUTC')
@@ -90,11 +90,11 @@ def run(uargs):
                 else:
                     raise ValueError('Routing policy was not configured correctly (value set to {})'.format(routing_policy))
 
-                if restoration_policy == 'DNR':
-                    restoration_policy_instance = restoration_policies.DoNotRestorePolicy()
-                elif restoration_policy == 'PR':
+                #if restoration_policy == 'DNR':
+                #    restoration_policy_instance = restoration_policies.DoNotRestorePolicy()
+                #if restoration_policy == 'PR':
                     restoration_policy_instance = restoration_policies.PathRestorationPolicy()
-                elif restoration_policy == 'PRwR':
+                if restoration_policy == 'PRwR':
                     restoration_policy_instance = restoration_policies.PathRestorationWithRelocationPolicy()
                 elif restoration_policy == 'PRPA':
                     restoration_policy_instance = restoration_policies.PathRestorationPropabilitiesAware()
@@ -119,7 +119,6 @@ def run(uargs):
                 print("Ran in debug mode... exiting...")
                 exit(0)
                 """
-                
                 
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
@@ -186,7 +185,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--threads', type=int, default=env.threads,
                         help='Number of threads to be used to run the simulations (default={})'.format(
                             env.threads))
-    parser.add_argument('--min_load', type=int, default=600,
+    parser.add_argument('--min_load', type=int, default=560,
                         help='Load in Erlangs of the traffic generated (mandatory)')
     parser.add_argument('--max_load', type=int, default=840,
                         help='Load in Erlangs of the traffic generated (mandatory)')

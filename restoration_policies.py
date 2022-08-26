@@ -78,9 +78,23 @@ class PathRestorationPolicy(RestorationPolicy):
         restored_services = 0 
         relocated_services = 0
         failed_services = 0
-        
         # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
-        services = sorted(services, key=lambda x: x.holding_time - (self.env.current_time - x.arrival_time))
+        #services = sorted(services, key=lambda x: x.class_priority*(x.holding_time - (self.env.current_time - x.arrival_time)))
+        class1_services = []
+        class2_services = []
+
+        for s in services:
+            if s.class_priority == 1:
+                class1_services.append(s)
+            elif s.class_priority == 2:
+                class2_services.append(s)
+        class1_services = services = sorted(class1_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        class2_services = services = sorted(class2_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        
+        services = class1_services
+        for c2s in class2_services:
+            services.append(c2s)
+        
         '''
         if(services != None):
             print("remaining time: ")
@@ -131,10 +145,27 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
         restored_services = 0 
         relocated_services = 0
         failed_services = 0
-        
+
         # remaining time = holding time - (current time - arrival time)
         # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
-        services = sorted(services, key=lambda x: x.holding_time - (self.env.current_time - x.arrival_time))
+
+        #services = sorted(services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+
+        class1_services = []
+        class2_services = []
+
+        for s in services:
+            if s.class_priority == 1:
+                class1_services.append(s)
+            elif s.class_priority == 2:
+                class2_services.append(s)
+        class1_services = services = sorted(class1_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        class2_services = services = sorted(class2_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        
+        services = class1_services
+        for c2s in class2_services:
+            services.append(c2s)
+
         '''
         if(services != None):
             print("remaining time: ")
@@ -223,7 +254,24 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         failed_services = 0
         
         # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
-        services = sorted(services, key=lambda x: x.holding_time - (self.env.current_time - x.arrival_time))
+        #services = sorted(services, key=lambda x: x.class_priority*(x.holding_time - (self.env.current_time - x.arrival_time)))
+
+    
+        class1_services = []
+        class2_services = []
+
+        for s in services:
+            if s.class_priority == 1:
+                class1_services.append(s)
+            elif s.class_priority == 2:
+                class2_services.append(s)
+        class1_services = services = sorted(class1_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        class2_services = services = sorted(class2_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        
+        services = class1_services
+        for c2s in class2_services:
+            services.append(c2s)
+
         '''
         if(services != None):
             print("remaining time: ")

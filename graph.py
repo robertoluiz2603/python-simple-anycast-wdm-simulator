@@ -138,8 +138,8 @@ def get_dcs(args, topology):
         return topology
 
     if args.dc_placement == "fixed":  # fixed positions
-       #"Los_Angeles","New_Orleans", "Washington_DC", "El_Paso","Columbus"
-        dc_nodes = ["Seattle", "San_Francisco",  "Denver",   "Charleston", "Ithaca", ]  # list of datacenters
+        #,"Los_Angeles","New_Orleans", "Washington_DC", "El_Paso","Columbus" 
+        dc_nodes = ["Seattle", "San_Francisco",  "Denver",   "Charleston", "Ithaca"]  # list of datacenters
         for node in topology.nodes():  # iterate over all nodes
             if node in dc_nodes:
                 topology.graph['dcs'].append(node)

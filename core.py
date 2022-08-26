@@ -1,3 +1,4 @@
+from dis import dis
 import logging
 import random
 import heapq
@@ -25,6 +26,10 @@ class Environment:
         else:
             self.mean_service_holding_time: float = 86400.0  # service holding time in seconds (54000 sec = 15 h)
 
+        self.total_path_risk = 0.0
+        self.total_hops_disrupted_services = 0.0
+        self.total_hops_restaured_services = 0.0
+        self.total_hops_relocated_services = 0.0
         self.load: float = 0.0
 
         self.priority_classes:float = [ 0.000003, 0.00000375]
@@ -35,8 +40,10 @@ class Environment:
 
         self.total_expected_capacity_loss: float = 0
 
+        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4']
         #total number of disaster during a simulation
-        self.number_disaster_occurences: int = 19
+        self.number_disaster_occurences: int = len(self.disaster_zones)
+        self.number_disaster_processed: int = 0
         
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
@@ -93,7 +100,6 @@ class Environment:
         self.disaster_arrivals_interval:int = int(self.num_arrivals/ (self.number_disaster_occurences+1))
         self.next_disaster_point:int = int(self.disaster_arrivals_interval)
 
-        print("Primeiro desastre em ", self.next_disaster_point)
         self.topology_file: str = "nobel-us.xml"  #"nobel-us.xml" #"test-topo.xml"
         self.topology_name: str = 'nobel-us'
         # self.topology_file = "simple"  # "nobel-us.xml" #"test-topo.xml"
@@ -142,7 +148,9 @@ class Environment:
         self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
                                         'average_availability', 'average_restorability', 'link_failure_arrivals', 
                                         'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures', 'average_relocation',
-                                        'avg_expected_capacity_loss', 'avg_loss_cost', 'avg_expected_loss_cost']
+                                        'avg_expected_capacity_loss', 'avg_loss_cost', 'avg_expected_loss_cost',
+                                        'avg_hops_disrupted_services', 'avg_hops_restaured_services', 'avg_hops_relocated_services',
+                                        'avg_restaured_path_risk']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -186,14 +194,21 @@ class Environment:
             'avg_loss_cost': self.total_loss_cost/self.number_disrupted_services,
             'avg_expected_loss_cost': self.total_expected_loss_cost/self.number_disrupted_services,
             'avg_expected_capacity_loss': self.total_expected_capacity_loss/self.number_disrupted_services,
+            'avg_hops_disrupted_services': self.total_hops_disrupted_services/self.number_disrupted_services,
+            'avg_hops_restaured_services': self.total_hops_restaured_services/self.number_disrupted_services,
+            'avg_hops_relocated_services': self.total_hops_relocated_services/self.number_disrupted_services
         })
-
+        
     def reset(self, seed=None, id_simulation=None):
         self.events = []  # event queue
         self._processed_arrivals = 0
         self._rejected_services = 0
         self.current_time = 0.0
+        self.total_hops_disrupted_services = 0.0
+        self.total_hops_restaured_services = 0.0
+        self.total_hops_relocated_services = 0.0
 
+        self.number_disaster_processed: int = 0
         self.total_expected_loss_cost: float  = 0
 
         self.total_loss_cost: float = 0
@@ -220,6 +235,8 @@ class Environment:
             self.id_simulation = id_simulation
 
         self.next_disaster_point = self.disaster_arrivals_interval
+
+        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4']
 
         # (re)-initialize the graph
         self.topology.graph['running_services'] = []
@@ -265,7 +282,14 @@ class Environment:
         ht = self.rng.expovariate(1 / self.mean_service_holding_time)
         src = self.rng.choice([x for x in self.topology.graph['source_nodes']])
         src_id = self.topology.graph['node_indices'].index(src)
-        cost = float(random.choice(self.priority_classes))
+        choose_class = random.randint(1, 10)
+        
+        if(choose_class<3):
+            cost = float(self.priority_classes[1])
+            cp = 1
+        else:
+            cost = float(self.priority_classes[0])
+            cp = 2
         self._processed_arrivals += 1
 
         if self._processed_arrivals % self.track_stats_every == 0:
@@ -294,12 +318,19 @@ class Environment:
                 self.tracked_results['avg_expected_capacity_loss'].append(self.total_expected_capacity_loss / self.number_disrupted_services)
                 self.tracked_results['avg_expected_loss_cost'].append(self.total_expected_loss_cost/self.number_disrupted_services)
                 self.tracked_results['avg_loss_cost'].append(self.total_loss_cost/self.number_disrupted_services)
+                self.tracked_results['avg_hops_disrupted_services'].append(self.total_hops_disrupted_services/self.number_disrupted_services)
+                self.tracked_results['avg_hops_restaured_services'].append(self.total_hops_restaured_services/self.number_disrupted_services)
+                self.tracked_results['avg_hops_relocated_services'].append(self.total_hops_relocated_services/self.number_disrupted_services)
             else:  # if no failures, 100% restorability
                 self.tracked_results['avg_loss_cost'].append(0.0)
                 self.tracked_results['average_restorability'].append(1.)
                 self.tracked_results['average_relocation'].append(0.0)
                 self.tracked_results['avg_expected_capacity_loss'].append(0.0)
                 self.tracked_results['avg_expected_loss_cost'].append(0.0) 
+                self.tracked_results['avg_hops_disrupted_services'].append(0.0)
+                self.tracked_results['avg_hops_restaured_services'].append(0.0)
+                self.tracked_results['avg_hops_relocated_services'].append(0.0)
+
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
             plots.plot_simulation_progress(self)
 
@@ -310,9 +341,11 @@ class Environment:
                                expected_loss_cost=cost*2,
                                source=src, 
                                source_id=src_id,
-                               computing_units=random.randint(1, 5))
-        if(self._processed_arrivals == self.next_disaster_point):
+                               computing_units=random.randint(1, 5),
+                               class_priority=cp)
+        if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):
             self.setup_next_disaster()
+            self.number_disaster_processed+=1
             self.next_disaster_point += self.disaster_arrivals_interval
 
         self.services.append(next_arrival)
@@ -401,7 +434,7 @@ class Environment:
     def setup_next_disaster(self):
         if self._processed_arrivals > self.num_arrivals:
             return
-        zones = []
+        #zones = []
         src_tgt = []
         links_to_fail = []
         nodes_to_fail=[]
@@ -410,9 +443,12 @@ class Environment:
         tfpath = "config/topologies/"+self.topology_file
         elementTree = ET.parse(tfpath)
         root = elementTree.getroot()
-        for z in root.findall(".//zone"):
-            zones.append(z.attrib['id'])
-        zone_to_fail = random.choice(zones)
+
+        #for z in root.findall(".//zone"):
+        #    zones.append(z.attrib['id'])
+
+        zone_to_fail = random.choice(self.disaster_zones)
+        self.disaster_zones.remove(zone_to_fail)
 
         #Appends links in epicenter to links_to_fail list    
         for lf in root.findall(".//zone[@id='"+zone_to_fail+"']/region[@id='R0']/disaster_link"):
@@ -514,6 +550,7 @@ class Service:
     holding_time: float
     source: str
     source_id: int
+    class_priority: int
     loss_cost: float = 0.0
     expected_loss_cost: float = 0.0
     expected_risk: float = 0.0

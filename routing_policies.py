@@ -121,15 +121,12 @@ def get_max_usage(topology: 'Graph', path: 'Path') -> int:
 
 def get_path_risk(topology: 'Graph', path: 'Path'):
     aecl:float = 0.0
-    print("get_path_risk")
     for i in range(len(path.node_list) - 1):
-        print("entrou")
         x = topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability']
         y = topology[path.node_list[i]][path.node_list[i+1]]['total_units']
         aecl += topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'] *topology[path.node_list[i]][path.node_list[i+1]]['total_units']
-        print(topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'])
-        print(topology[path.node_list[i]][path.node_list[i + 1]]['total_units'])
-    print("saiu")
+        #print(topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'])
+        #print(topology[path.node_list[i]][path.node_list[i + 1]]['total_units'])
     return aecl / (len(path.node_list) - 1)
 
 def get_shortest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
@@ -150,13 +147,19 @@ def get_safest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
         raise ValueError(f"Service should have value for destination, got {service}")
     closest_path_hops = np.finfo(0.0).max
     safest_path = None
-    safest_path_risk = 1.0
+    safest_path_risk = 100.0
     if topology.nodes[service.destination]['available_units'] >= service.computing_units:
         paths = topology.graph['ksp'][service.source, service.destination]
+        print(len(paths))
         for path in paths:
+            print("get safest path hops")
+            
             new_path_risk = get_path_risk(topology, path)
-            if is_path_viable(topology, path, service.network_units) and safest_path_risk > new_path_risk and closest_path_hops > path.hops:
+            print("Anterior: ", new_path_risk)
+            if is_path_viable(topology, path, service.network_units) and safest_path_risk > new_path_risk:
+                print (new_path_risk)
                 closest_path_hops = path.hops
                 safest_path_risk = new_path_risk
                 safest_path = path
+    print(safest_path_risk)
     return safest_path

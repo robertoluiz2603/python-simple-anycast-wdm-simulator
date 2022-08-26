@@ -307,10 +307,6 @@
     <link id="L40">
    	<source>Charlotte</source>
    	<target>Louisville</target>
-   </link> 
-    <link id="L41">
-   	<source>Washington_DC</source>
-   	<target>Louisville</target>
    </link>
     <link id="L41">
    	<source>Charlotte</source>
@@ -353,6 +349,88 @@
       <disaster_link probability = '0.05'>L24</disaster_link>
       <disaster_link probability = '0.05'>L26</disaster_link>
       <disaster_link probability = '0.05'>L10</disaster_link>
+    </region>
+  </zone>
+  <zone id = 'Z2'>
+    <region id = 'R0'>
+    	<disaster_link probability = '1.0'>L2</disaster_link>
+      <disaster_link probability = '1.0'>L3</disaster_link>
+    	<disaster_link probability = '1.0'>L4</disaster_link>
+    	<disaster_link probability = '1.0'>L5</disaster_link>
+      <disaster_link probability = '1.0'>L6</disaster_link>
+    	<disaster_link probability = '1.0'>L7</disaster_link>
+    </region>
+	  <region id = 'R1'>
+    	<disaster_link probability = '0.73'>L8</disaster_link>
+    	<disaster_link probability = '0.73'>L9</disaster_link>
+      <disaster_link probability = '0.73'>L10</disaster_link>
+    	<disaster_link probability = '0.73'>L14</disaster_link>
+    </region>
+    <region id = 'R2'>
+      <disaster_link probability = '0.15'>L1</disaster_link>
+    	<disaster_link probability = '0.15'>L12</disaster_link>
+    </region>
+    <region id = 'R3'>
+      <disaster_link probability = '0.05'>L11</disaster_link>
+      <disaster_link probability = '0.05'>L13</disaster_link>
+      <disaster_link probability = '0.05'>L16</disaster_link>
+    </region>
+  </zone>
+  <zone id = 'Z3'>
+    <region id = 'R0'>
+	    <disaster_link probability = '1.0'>L22</disaster_link>
+      <disaster_link probability = '1.0'>L23</disaster_link>
+      <disaster_link probability = '1.0'>L24</disaster_link>
+    </region>
+	  <region id = 'R1'>
+    	<disaster_link probability = '0.73'>L16</disaster_link>
+    	<disaster_link probability = '0.73'>L15</disaster_link>
+      <disaster_link probability = '0.73'>L21</disaster_link>
+    	<disaster_link probability = '0.73'>L27</disaster_link>
+    	<disaster_link probability = '0.73'>L26</disaster_link>
+    </region>
+    <region id = 'R2'>
+      <disaster_link probability = '0.15'>L19</disaster_link>
+    </region>
+    <region id = 'R3'>
+      <disaster_link probability = '0.05'>L8</disaster_link>
+      <disaster_link probability = '0.05'>L9</disaster_link>
+      <disaster_link probability = '0.05'>L13</disaster_link>
+      <disaster_link probability = '0.05'>L14</disaster_link>
+      <disaster_link probability = '0.05'>L17</disaster_link>
+      <disaster_link probability = '0.05'>L20</disaster_link>
+      <disaster_link probability = '0.05'>L29</disaster_link>
+      <disaster_link probability = '0.05'>L39</disaster_link>
+      <disaster_link probability = '0.05'>L25</disaster_link>
+      <disaster_link probability = '0.05'>L41</disaster_link>
+      <disaster_link probability = '0.05'>L42</disaster_link>
+      <disaster_link probability = '0.05'>L32</disaster_link>
+    </region>
+  </zone>
+  <zone id = 'Z4'>
+    <region id = 'R0'>
+    	<disaster_link probability = '1.0'>L38</disaster_link>
+      <disaster_link probability = '1.0'>L34</disaster_link>
+    	<disaster_link probability = '1.0'>L35</disaster_link>
+    	<disaster_link probability = '1.0'>L39</disaster_link>
+      <disaster_link probability = '1.0'>L36</disaster_link>
+    </region>
+	  <region id = 'R1'>
+    	<disaster_link probability = '0.73'>L33</disaster_link>
+    	<disaster_link probability = '0.73'>L34</disaster_link>
+      <disaster_link probability = '0.73'>L40</disaster_link>
+    </region>
+    <region id = 'R2'>
+      <disaster_link probability = '0.15'>L31</disaster_link>
+      <disaster_link probability = '0.15'>L32</disaster_link>
+      <disaster_link probability = '0.15'>L29</disaster_link>
+      <disaster_link probability = '0.15'>L42</disaster_link>
+      <disaster_link probability = '0.15'>L43</disaster_link>
+      <disaster_link probability = '0.15'>L28</disaster_link>
+      <disaster_link probability = '0.15'>L37</disaster_link>
+    </region>
+    <region id = 'R3'>
+      <disaster_link probability = '0.05'>L27</disaster_link>
     </region>
   </zone>
 </disaster_zones>

@@ -96,7 +96,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     markers = ['', 'x', 'o', '*']
     line_styles = ['-', '--', ':', '-.']
     plt.figure(figsize=(12, 9))
-    plt.subplot(3, 3, 1)
+    plt.subplot(4, 3, 1)
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
             if any(results[routing_policy][restoration_policy][load][x]['request_blocking_ratio'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in range(len(results[routing_policy][restoration_policy][load]))):
@@ -106,7 +106,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Req. blocking ratio')
 
-    plt.subplot(3, 3, 2)
+    plt.subplot(4, 3, 2)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -120,7 +120,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     # if has_data:
     #     plt.legend(loc=2)
 
-    plt.subplot(3, 3, 3)
+    plt.subplot(4, 3, 3)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -136,7 +136,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     if has_data:
         plt.legend(loc=2)
 
-    plt.subplot(3, 3, 4)
+    plt.subplot(4, 3, 4)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -150,7 +150,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. availability')
 
-    plt.subplot(3, 3, 5)
+    plt.subplot(4, 3, 5)
     has_data = False
     num_routing_policies = len(results.keys())
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -167,7 +167,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. restorability')
 
-    plt.subplot(3, 3, 6)
+    plt.subplot(4, 3, 6)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -183,20 +183,20 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
 
     #Below are measurements related to cascading failures.
 
-    plt.subplot(3, 3, 7)
+    plt.subplot(4, 3, 7)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
-            if any(results[routing_policy][restoration_policy][load][x]['avg_expected_loss_cost'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
+            if any(results[routing_policy][restoration_policy][load][x]['avg_expected_capacity_loss'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
                 range(len(results[routing_policy][restoration_policy][load]))):
                 has_data = True
                 plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
-                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_expected_loss_cost'] for x in
+                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_expected_capacity_loss'] for x in
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. expected capacity loss')
-    plt.subplot(3, 3, 8)
+    plt.subplot(4, 3, 8)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -209,7 +209,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. loss cost')
-    plt.subplot(3, 3, 9)
+    plt.subplot(4, 3, 9)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -223,6 +223,47 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. expected loss cost')
 
+    plt.subplot(4, 3, 10)
+    has_data = False
+    for id_routing_policy, routing_policy in enumerate(results.keys()):
+        for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
+            if any(results[routing_policy][restoration_policy][load][x]['avg_hops_disrupted_services'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
+                range(len(results[routing_policy][restoration_policy][load]))):
+                has_data = True
+                plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
+                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_hops_disrupted_services'] for x in
+                                        range(len(results[routing_policy][restoration_policy][load]))]) for
+                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
+    plt.xlabel('Load [Erlang]')
+    plt.ylabel('Avg. hops_all_disrupted_services')
+
+    plt.subplot(4, 3, 11)
+    has_data = False
+    for id_routing_policy, routing_policy in enumerate(results.keys()):
+        for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
+            if any(results[routing_policy][restoration_policy][load][x]['avg_hops_restaured_services'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
+                range(len(results[routing_policy][restoration_policy][load]))):
+                has_data = True
+                plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
+                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_hops_restaured_services'] for x in
+                                        range(len(results[routing_policy][restoration_policy][load]))]) for
+                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
+    plt.xlabel('Load [Erlang]')
+    plt.ylabel('Avg. hops_restaured_services')
+
+    plt.subplot(4, 3, 12)
+    has_data = False
+    for id_routing_policy, routing_policy in enumerate(results.keys()):
+        for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
+            if any(results[routing_policy][restoration_policy][load][x]['avg_hops_relocated_services'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
+                range(len(results[routing_policy][restoration_policy][load]))):
+                has_data = True
+                plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
+                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_hops_relocated_services'] for x in
+                                        range(len(results[routing_policy][restoration_policy][load]))]) for
+                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
+    plt.xlabel('Load [Erlang]')
+    plt.ylabel('Avg. hops_relocated_services')
 
     total_simulations = num_routing_policies * num_restoration_policies * env.num_seeds
     performed_simulations = np.sum([len(results[p][l]) for p in results.keys() for l in results[p].keys()])
