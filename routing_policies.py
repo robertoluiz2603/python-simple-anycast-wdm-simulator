@@ -149,7 +149,7 @@ def get_safest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
     safest_path = None
     safest_path_risk = 100.0
     if topology.nodes[service.destination]['available_units'] >= service.computing_units:
-        paths = topology.graph['ksp'][service.source, service.destination]
+        paths = topology.graph['prob_ksp'][service.source, service.destination]
         print(len(paths))
         for path in paths:
             print("get safest path hops")

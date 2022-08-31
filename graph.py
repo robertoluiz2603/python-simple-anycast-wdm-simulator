@@ -167,3 +167,20 @@ def get_ksp(args, topology):
             k_shortest_paths[n2, n1] = objs
     topology.graph['ksp'] = k_shortest_paths
     return topology
+
+#TODO: Get actual link probability
+def get_probability_ksp(args, topology):
+    k_shortest_paths = {}
+
+    for idn1, n1 in enumerate(topology.graph['source_nodes']):
+        for idn2, n2 in enumerate(topology.graph['dcs']):
+            paths = get_k_shortest_paths(topology, n1, n2, args.k_paths, 2)
+            lengths = [get_path_weight(topology, path) for path in paths]
+            objs = []
+            for path, length in zip(paths, lengths):
+                objs.append(Path(path, length))
+            # both directions have the same paths, i.e., bidirectional symmetrical links
+            k_shortest_paths[n1, n2] = objs
+            k_shortest_paths[n2, n1] = objs
+    topology.graph['prob_ksp'] = k_shortest_paths
+    return topology

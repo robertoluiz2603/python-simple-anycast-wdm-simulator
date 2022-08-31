@@ -27,6 +27,7 @@ def run(uargs):
     topology = graph.get_topology(uargs)
     topology = graph.get_dcs(uargs, topology)
     topology = graph.get_ksp(uargs, topology)
+    topology = graph.get_probability_ksp(uargs, topology)
     env = core.Environment(uargs, topology=topology)
 
     logger = logging.getLogger('run')
@@ -114,11 +115,10 @@ def run(uargs):
                 # code for debugging purposes -- it runs without multithreading
                 
                 # if load == 600 and routing_policy == 'CADC':
-                """
+                
                 core.run_simulation(env_t)
                 print("Ran in debug mode... exiting...")
                 exit(0)
-                """
                 
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')

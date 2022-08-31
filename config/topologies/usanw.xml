@@ -343,12 +343,12 @@
       <disaster_link probability = '0.15'>L23</disaster_link>
       <disaster_link probability = '0.15'>L28</disaster_link>
       <disaster_link probability = '0.15'>L37</disaster_link>
-    </region>
-    <region id = 'R3'>
       <disaster_link probability = '0.05'>L16</disaster_link>
       <disaster_link probability = '0.05'>L24</disaster_link>
-      <disaster_link probability = '0.05'>L26</disaster_link>
+    </region>
+    <region id = 'R3'>
       <disaster_link probability = '0.05'>L10</disaster_link>
+      <disaster_link probability = '0.05'>L26</disaster_link>
     </region>
   </zone>
   <zone id = 'Z2'>
@@ -374,6 +374,7 @@
       <disaster_link probability = '0.05'>L11</disaster_link>
       <disaster_link probability = '0.05'>L13</disaster_link>
       <disaster_link probability = '0.05'>L16</disaster_link>
+      <disaster_link probability = '0.05'>L18</disaster_link>
     </region>
   </zone>
   <zone id = 'Z3'>
@@ -381,13 +382,13 @@
 	    <disaster_link probability = '1.0'>L22</disaster_link>
       <disaster_link probability = '1.0'>L23</disaster_link>
       <disaster_link probability = '1.0'>L24</disaster_link>
+    	<disaster_link probability = '1.0'>L26</disaster_link>
     </region>
 	  <region id = 'R1'>
     	<disaster_link probability = '0.73'>L16</disaster_link>
     	<disaster_link probability = '0.73'>L15</disaster_link>
       <disaster_link probability = '0.73'>L21</disaster_link>
     	<disaster_link probability = '0.73'>L27</disaster_link>
-    	<disaster_link probability = '0.73'>L26</disaster_link>
     </region>
     <region id = 'R2'>
       <disaster_link probability = '0.15'>L19</disaster_link>
@@ -430,6 +431,7 @@
       <disaster_link probability = '0.15'>L37</disaster_link>
     </region>
     <region id = 'R3'>
+      <disaster_link probability = '0.05'>L25</disaster_link>
       <disaster_link probability = '0.05'>L27</disaster_link>
     </region>
   </zone>
