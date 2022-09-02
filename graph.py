@@ -70,6 +70,7 @@ def read_sndlib_topology(file):
                 latlong2 = graph.nodes[target.childNodes[0].data]["pos"]
                 length = np.around(math.sqrt((latlong1[0] - latlong2[0]) ** 2 + (latlong1[1] - latlong2[1]) ** 2), 3)
 
+            
             weight = 1.0
             graph.add_edge(source.childNodes[0].data, target.childNodes[0].data,
                            id=link.getAttribute("id"), weight=weight, length=length, index=idx,
@@ -169,12 +170,12 @@ def get_ksp(args, topology):
     return topology
 
 #TODO: Get actual link probability
-def get_probability_ksp(args, topology):
+"""def get_probability_ksp(args, topology):
     k_shortest_paths = {}
 
     for idn1, n1 in enumerate(topology.graph['source_nodes']):
         for idn2, n2 in enumerate(topology.graph['dcs']):
-            paths = get_k_shortest_paths(topology, n1, n2, args.k_paths, 2)
+            paths = get_k_shortest_paths(topology, n1, n2, args.k_paths)
             lengths = [get_path_weight(topology, path) for path in paths]
             objs = []
             for path, length in zip(paths, lengths):
@@ -184,3 +185,4 @@ def get_probability_ksp(args, topology):
             k_shortest_paths[n2, n1] = objs
     topology.graph['prob_ksp'] = k_shortest_paths
     return topology
+"""

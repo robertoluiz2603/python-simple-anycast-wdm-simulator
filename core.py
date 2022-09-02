@@ -168,6 +168,20 @@ class Environment:
         self.plot_formats: tuple = ('pdf', 'svg')  # you can configure this to other formats such as PNG, SVG
 
         self.logger = logging.getLogger(f'env-{self.load}')  # TODO: colocar outras informacoes necessarias
+        self.priority_class_list = self.priority_class_inicialization()
+        print(self.priority_class_list)
+
+    def priority_class_inicialization(self):
+        priority_class_list = []
+        pc1 = PriorityClass(priority=1,loss_cost=0.00000375,expected_loss_cost=0.0000075,max_degradation=0,max_delay=0)
+        priority_class_list.append(pc1)
+        pc2 = PriorityClass(priority=2,loss_cost=0.000003,expected_loss_cost=0.000006,max_degradation=0,max_delay=0)
+        priority_class_list.append(pc2)
+        pc3 = PriorityClass(priority=3,loss_cost=0.0000015,expected_loss_cost=0.000003,max_degradation=0,max_delay=0)
+        priority_class_list.append(pc3)
+        pc4 = PriorityClass(priority=4,loss_cost=0.0,expected_loss_cost=0.0,max_degradation=0,max_delay=0)
+        priority_class_list.append(pc4)
+        return priority_class_list
 
     def compute_simulation_stats(self):
         # run here the code to summarize statistics from this specific run
@@ -333,7 +347,7 @@ class Environment:
 
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
             plots.plot_simulation_progress(self)
-
+        
         next_arrival = Service(service_id=self._processed_arrivals, 
                                arrival_time=at, 
                                holding_time=ht,
@@ -342,7 +356,8 @@ class Environment:
                                source=src, 
                                source_id=src_id,
                                computing_units=random.randint(1, 5),
-                               class_priority=cp)
+                               class_priority=cp,
+                               priority=PriorityClass())
         if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):
             self.setup_next_disaster()
             self.number_disaster_processed+=1
@@ -539,6 +554,13 @@ def run_simulation(env: Environment):
     # prepare observations
     logger.info(f'Finishing simulation for load {env.load} and policy {env.routing_policy.name}')
 
+@dataclass
+class PriorityClass:
+    priority: int = 0
+    loss_cost: float = 0.0
+    expected_loss_cost: float = 0.0
+    max_degradation: float = 0.0
+    max_delay: float = 0.0
 
 @dataclass(eq=False, repr=False)
 class Service:
@@ -551,6 +573,7 @@ class Service:
     source: str
     source_id: int
     class_priority: int
+    priority: PriorityClass
     loss_cost: float = 0.0
     expected_loss_cost: float = 0.0
     expected_risk: float = 0.0

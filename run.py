@@ -27,7 +27,7 @@ def run(uargs):
     topology = graph.get_topology(uargs)
     topology = graph.get_dcs(uargs, topology)
     topology = graph.get_ksp(uargs, topology)
-    topology = graph.get_probability_ksp(uargs, topology)
+    #topology = graph.get_probability_ksp(uargs, topology)
     env = core.Environment(uargs, topology=topology)
 
     logger = logging.getLogger('run')
