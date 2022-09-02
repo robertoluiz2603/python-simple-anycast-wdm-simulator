@@ -32,7 +32,7 @@ class Environment:
         self.total_hops_relocated_services = 0.0
         self.load: float = 0.0
 
-        self.priority_classes:float = [ 0.000003, 0.00000375]
+        #self.priority_classes:float = [ 0.000003, 0.00000375]
 
         self.total_expected_loss_cost: float  = 0
 
@@ -169,7 +169,6 @@ class Environment:
 
         self.logger = logging.getLogger(f'env-{self.load}')  # TODO: colocar outras informacoes necessarias
         self.priority_class_list = self.priority_class_inicialization()
-        print(self.priority_class_list)
 
     def priority_class_inicialization(self):
         priority_class_list = []
@@ -298,12 +297,11 @@ class Environment:
         src_id = self.topology.graph['node_indices'].index(src)
         choose_class = random.randint(1, 10)
         
+        priority_choose: PriorityClass()
         if(choose_class<3):
-            cost = float(self.priority_classes[1])
-            cp = 1
+            priority_choose = self.priority_class_list[0]
         else:
-            cost = float(self.priority_classes[0])
-            cp = 2
+            priority_choose = self.priority_class_list[1]
         self._processed_arrivals += 1
 
         if self._processed_arrivals % self.track_stats_every == 0:
@@ -351,13 +349,10 @@ class Environment:
         next_arrival = Service(service_id=self._processed_arrivals, 
                                arrival_time=at, 
                                holding_time=ht,
-                               loss_cost=cost,
-                               expected_loss_cost=cost*2,
                                source=src, 
                                source_id=src_id,
                                computing_units=random.randint(1, 5),
-                               class_priority=cp,
-                               priority=PriorityClass())
+                               priority_class=priority_choose)
         if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):
             self.setup_next_disaster()
             self.number_disaster_processed+=1
@@ -572,10 +567,7 @@ class Service:
     holding_time: float
     source: str
     source_id: int
-    class_priority: int
-    priority: PriorityClass
-    loss_cost: float = 0.0
-    expected_loss_cost: float = 0.0
+    priority_class: PriorityClass
     expected_risk: float = 0.0
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)

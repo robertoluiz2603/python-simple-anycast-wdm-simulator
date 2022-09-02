@@ -84,9 +84,9 @@ class PathRestorationPolicy(RestorationPolicy):
         class2_services = []
 
         for s in services:
-            if s.class_priority == 1:
+            if s.priority_class.priority == 1:
                 class1_services.append(s)
-            elif s.class_priority == 2:
+            elif s.priority_class.priority == 2:
                 class2_services.append(s)
         class1_services = services = sorted(class1_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
         class2_services = services = sorted(class2_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
@@ -155,9 +155,9 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
         class2_services = []
 
         for s in services:
-            if s.class_priority == 1:
+            if s.priority_class.priority == 1:
                 class1_services.append(s)
-            elif s.class_priority == 2:
+            elif s.priority_class.priority == 2:
                 class2_services.append(s)
         class1_services = services = sorted(class1_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
         class2_services = services = sorted(class2_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
@@ -261,9 +261,9 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         class2_services = []
 
         for s in services:
-            if s.class_priority == 1:
+            if s.priority_class.priority == 1:
                 class1_services.append(s)
-            elif s.class_priority == 2:
+            elif s.priority_class.priority == 2:
                 class2_services.append(s)
         class1_services = services = sorted(class1_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
         class2_services = services = sorted(class2_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))

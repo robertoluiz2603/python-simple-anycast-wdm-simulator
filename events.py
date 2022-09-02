@@ -166,7 +166,7 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
         expected_capacity_loss += service.expected_risk
         if service.failed!=True: 
              # service could be restored
-            expected_loss_cost += service.expected_risk * service.expected_loss_cost
+            expected_loss_cost += service.expected_risk * service.priority_class.expected_loss_cost
             number_restored_services += 1
             # puts the connection back into the network         
             if(service.route != None):
@@ -182,7 +182,7 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
             service.service_time = env.current_time - service.arrival_time
             # computing the availability <= 1.0
             service.availability = service.service_time / service.holding_time
-            loss_cost += service.loss_cost    
+            loss_cost += service.priority_class.loss_cost  
             number_lost_services+=1     
         if(service.route != None):
             number_hops_disrupted += service.route.hops
