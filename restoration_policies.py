@@ -10,6 +10,23 @@ from networkx import Graph
 
 import routing_policies
 
+def services_sorting(self, services: Sequence['Service']):
+    
+    services_list = []
+    for classidx in range(1,5):
+        print(classidx)
+        partial_services_list = []
+        for s in services:
+            if s.priority_class.priority == classidx:
+                partial_services_list.append(s)
+        sorted_services = sorted(partial_services_list, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+            
+        for s in sorted_services:
+            services_list.append(s)
+    services = services_list
+    print("Length after", len(services))
+    return services
+
 class RestorationPolicy(abc.ABC):
 
     def __init__(self) -> None:
@@ -82,7 +99,14 @@ class PathRestorationPolicy(RestorationPolicy):
         #services = sorted(services, key=lambda x: x.class_priority*(x.holding_time - (self.env.current_time - x.arrival_time)))
         class1_services = []
         class2_services = []
+        
+        services = services_sorting(self, services)
 
+        print("Lista de prioridades")
+        for s in services:
+            print(s.priority_class.priority)
+        print("Lista de prioridades")
+        '''
         for s in services:
             if s.priority_class.priority == 1:
                 class1_services.append(s)
@@ -94,7 +118,7 @@ class PathRestorationPolicy(RestorationPolicy):
         services = class1_services
         for c2s in class2_services:
             services.append(c2s)
-        
+        '''
         '''
         if(services != None):
             print("remaining time: ")
@@ -153,7 +177,14 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
 
         class1_services = []
         class2_services = []
+        
+        services = services_sorting(self, services)
 
+        print("Lista de prioridades")
+        for s in services:
+            print(s.priority_class.priority)
+        print("Lista de prioridades")
+        """
         for s in services:
             if s.priority_class.priority == 1:
                 class1_services.append(s)
@@ -165,7 +196,7 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
         services = class1_services
         for c2s in class2_services:
             services.append(c2s)
-
+        """
         '''
         if(services != None):
             print("remaining time: ")
@@ -256,21 +287,26 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
         #services = sorted(services, key=lambda x: x.class_priority*(x.holding_time - (self.env.current_time - x.arrival_time)))
 
-    
-        class1_services = []
-        class2_services = []
+        print("Length befor", len(services))
+        services = services_sorting(self, services)
 
+        """
         for s in services:
             if s.priority_class.priority == 1:
                 class1_services.append(s)
             elif s.priority_class.priority == 2:
                 class2_services.append(s)
+            elif s.priority_class.priority == 3:
+                class3_services.append(s)
+            elif s.priority_class.priority == 4:
+                class4_services.append(s)
         class1_services = services = sorted(class1_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
         class2_services = services = sorted(class2_services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
         
         services = class1_services
         for c2s in class2_services:
             services.append(c2s)
+        """
 
         '''
         if(services != None):

@@ -211,6 +211,26 @@ class Environment:
             'avg_hops_restaured_services': self.total_hops_restaured_services/self.number_disrupted_services,
             'avg_hops_relocated_services': self.total_hops_relocated_services/self.number_disrupted_services
         })
+    def random_class(self):
+        #Selects a int from 1 to 18
+        rand_class = random.randint(1, 18)
+        priority_choose: PriorityClass()
+
+        #According to the integer selected, it is defined the service's class
+        if(rand_class<=2):
+            priority_choose = self.priority_class_list[0]
+
+        elif rand_class<=6 and rand_class>=3:
+            priority_choose = self.priority_class_list[1]
+
+        elif rand_class<=10 and rand_class>=7:
+            priority_choose = self.priority_class_list[2]
+            
+        else:
+            priority_choose = self.priority_class_list[3]
+
+        #Returns the priority_class selected
+        return priority_choose
         
     def reset(self, seed=None, id_simulation=None):
         self.events = []  # event queue
@@ -295,13 +315,11 @@ class Environment:
         ht = self.rng.expovariate(1 / self.mean_service_holding_time)
         src = self.rng.choice([x for x in self.topology.graph['source_nodes']])
         src_id = self.topology.graph['node_indices'].index(src)
-        choose_class = random.randint(1, 10)
-        
-        priority_choose: PriorityClass()
-        if(choose_class<3):
-            priority_choose = self.priority_class_list[0]
-        else:
-            priority_choose = self.priority_class_list[1]
+
+        #Randomly picks a class for the service
+        pc:PriorityClass()= self.random_class()
+        print(pc.priority)
+
         self._processed_arrivals += 1
 
         if self._processed_arrivals % self.track_stats_every == 0:
@@ -352,7 +370,7 @@ class Environment:
                                source=src, 
                                source_id=src_id,
                                computing_units=random.randint(1, 5),
-                               priority_class=priority_choose)
+                               priority_class=pc)
         if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):
             self.setup_next_disaster()
             self.number_disaster_processed+=1
