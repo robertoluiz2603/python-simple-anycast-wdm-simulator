@@ -125,6 +125,7 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     # get the list of disrupted services
 
     # extend the list with the running services
+    number_failed_again: int = 0
     for link_failure in disaster.links:
         env.logger.debug(f' - Link failed: {link_failure}')
         env.topology[link_failure[0]][link_failure[1]]['failed'] = True
@@ -143,9 +144,16 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
                 failed_service.failed = True
                 failed_service.relocated = False
                 services_disrupted.append(failed_service)
+
+            if failed_service.failed_before:
+                number_failed_again +=1
+            else:
+                failed_service.failed_before = True
+        
         
         if len(env.topology[link_failure[0]][link_failure[1]]['running_services']) != 0:
             env.logger.critical('Not all services were removed')
+
     #A lista deve ser convertida em um conjunto
     number_disrupted_services = len(services_disrupted)
     
@@ -166,14 +174,17 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
         expected_capacity_loss += service.expected_risk
         if service.failed!=True: 
              # service could be restored
-            expected_loss_cost += service.expected_risk * service.priority_class.expected_loss_cost
+
+
+            # expected_loss_cost += service.expected_risk * service.priority_class.expected_loss_cost
+            expected_loss_cost += service.priority_class.expected_loss_cost
+
             number_restored_services += 1
             # puts the connection back into the network         
             if(service.route != None):
                 number_hops_restaured += service.route.hops
-            if service.relocated:
-                number_relocated_services+=1
-                if(service.route != None):
+                if service.relocated:
+                    number_relocated_services+=1
                     number_hops_relocation += service.route.hops
         
         else:    
@@ -193,7 +204,8 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     if number_disrupted_services > 0:
         restorability = number_restored_services / number_disrupted_services
         env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
-    
+    env.failed_again_services += number_failed_again
+    env.cascade_affected_services += number_disrupted_services
     env.number_disrupted_services += number_disrupted_services
     env.total_expected_capacity_loss += expected_capacity_loss
     env.total_loss_cost += loss_cost
@@ -218,6 +230,11 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
   
 
 def disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
+    
+    env.cascade_happened_73 = 0
+    env.cascade_happened_15 = 0
+    env.cascade_happened_5 = 0
+    env.epicenter_happened = 0
     # in this case, only a single link failure is at the network at a given point in time
     env.logger.debug(f'Disaster repaired at time: {env.current_time} Links: {disaster.links}')
 
@@ -227,6 +244,7 @@ def disaster_departure(env: 'Environment', disaster: 'DisasterFailure') -> None:
     # put the link back in a working state
     for link in disaster.links:
         env.topology[link[0]][link[1]]['failed'] = False
+        env.topology[link[0]][link[1]]['link_failure_probability'] = 0
 
     for node in disaster.nodes:
         env.topology.nodes[node]['failed'] = False

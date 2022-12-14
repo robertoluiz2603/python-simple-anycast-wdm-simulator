@@ -26,12 +26,17 @@ class Environment:
         else:
             self.mean_service_holding_time: float = 86400.0  # service holding time in seconds (54000 sec = 15 h)
 
+        self.iter_disaster = -1
         self.total_path_risk = 0.0
         self.total_hops_disrupted_services = 0.0
         self.total_hops_restaured_services = 0.0
         self.total_hops_relocated_services = 0.0
         self.load: float = 0.0
-
+        self.cascade_affected_services = 0
+        self.epicenter_happened = 0
+        self.cascade_happened_73 = 0
+        self.cascade_happened_15 = 0
+        self.cascade_happened_0 = 0
         #self.priority_classes:float = [ 0.000003, 0.00000375]
 
         self.total_expected_loss_cost: float  = 0
@@ -42,8 +47,10 @@ class Environment:
 
         self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4']
         #total number of disaster during a simulation
-        self.number_disaster_occurences: int = len(self.disaster_zones)
+        self.number_disaster_occurences: int = len(self.disaster_zones) * 4
         self.number_disaster_processed: int = 0
+        
+        self.current_disaster_zone = []
         
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
@@ -52,6 +59,9 @@ class Environment:
 
         self.number_relocated_services: int =0
         # list with all services processed
+
+        self.failed_again_services: int =0
+
         self.services: Sequence[Service] = []
 
         # TODO: implementar obtencao do valor a partir do args
@@ -150,7 +160,9 @@ class Environment:
                                         'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures', 'average_relocation',
                                         'avg_expected_capacity_loss', 'avg_loss_cost', 'avg_expected_loss_cost',
                                         'avg_hops_disrupted_services', 'avg_hops_restaured_services', 'avg_hops_relocated_services',
-                                        'avg_restaured_path_risk']
+                                        'avg_restaured_path_risk', 'cascade_affected_services', 'avg_services_affected',
+                                        'avg_failed_before_services', 'epicenter_happened', 'cascade_happened_73', 'cascade_happened_15',
+                                        'cascade_happened_5']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -170,16 +182,56 @@ class Environment:
         self.logger = logging.getLogger(f'env-{self.load}')  # TODO: colocar outras informacoes necessarias
         self.priority_class_list = self.priority_class_inicialization()
 
+        
+
+    def setup_disaster_zones(self):
+        self.current_disaster_zone = []
+        self.disaster_zones_list = []
+        self.links = []
+        tfpath = "config/topologies/"+self.topology_file
+        elementTree = ET.parse(tfpath)
+        root = elementTree.getroot()
+
+        for zone in root.findall(".//zone"):
+            regions_in_zone = []
+            for region in root.findall(".//zone[@id='"+zone.attrib['id']+"']/region"):
+                links = []
+                for link in root.findall(".//zone[@id='"+zone.attrib['id']+"']/region[@id='"+region.attrib['id']+"']/disaster_link"):
+                    link_tuple = []
+                    for src in root.findall(".//link[@id='"+link.text+"']/source"):
+                        link_src = src.text
+                    for tgt in root.findall(".//link[@id='"+link.text+"']/target"):
+                        link_tgt = tgt.text
+                    
+                    self.topology[link_src][link_tgt]['link_failure_probability'] = float(link.attrib['probability'])
+                    link_tuple = []
+                    link_tuple.append(link_src)
+                    link_tuple.append(link_tgt)
+                    link_tuple.append(float(link.attrib['probability']))
+                    links.append(link_tuple)
+                regions_in_zone.append(links)
+            self.disaster_zones_list.append(regions_in_zone)  
+
+        for idx, z in enumerate(self.disaster_zones_list):
+            print("Zona: ", idx+1)
+            for idx, r in enumerate(z):
+                print("Regiao ", idx)
+                print(r)
+        return self.disaster_zones_list
+
     def priority_class_inicialization(self):
         priority_class_list = []
         pc1 = PriorityClass(priority=1,loss_cost=0.00000375,expected_loss_cost=0.0000075,max_degradation=0,max_delay=0)
         priority_class_list.append(pc1)
+        '''
         pc2 = PriorityClass(priority=2,loss_cost=0.000003,expected_loss_cost=0.000006,max_degradation=0,max_delay=0)
         priority_class_list.append(pc2)
+        
         pc3 = PriorityClass(priority=3,loss_cost=0.0000015,expected_loss_cost=0.000003,max_degradation=0,max_delay=0)
         priority_class_list.append(pc3)
         pc4 = PriorityClass(priority=4,loss_cost=0.0,expected_loss_cost=0.0,max_degradation=0,max_delay=0)
         priority_class_list.append(pc4)
+        '''
         return priority_class_list
 
     def compute_simulation_stats(self):
@@ -208,11 +260,26 @@ class Environment:
             'avg_expected_loss_cost': self.total_expected_loss_cost/self.number_disrupted_services,
             'avg_expected_capacity_loss': self.total_expected_capacity_loss/self.number_disrupted_services,
             'avg_hops_disrupted_services': self.total_hops_disrupted_services/self.number_disrupted_services,
-            'avg_hops_restaured_services': self.total_hops_restaured_services/self.number_disrupted_services,
-            'avg_hops_relocated_services': self.total_hops_relocated_services/self.number_disrupted_services
+            'avg_hops_restaured_services': self.total_hops_restaured_services/self.number_restored_services,
+            'avg_hops_relocated_services': self.total_hops_relocated_services/self.number_relocated_services,
+            'cascade_affected_services': self.cascade_affected_services,
+            'avg_services_affected': self.number_disrupted_services/self.number_disaster_occurences,
+            'avg_failed_before_services': self.failed_again_services,
+            'cascade_happened_73': self.cascade_happened_73,
+            'cascade_happened_15': self.cascade_happened_15,
+            'cascade_happened_5': self.cascade_happened_5,
+            'epicenter_happened': self.epicenter_happened
         })
+    def is_empty(self, list):
+        empty = 1
+        for item in list:
+            if item != []:
+                empty = 0
+        return empty
+        
     def random_class(self):
-        #Selects a int from 1 to 18
+        '''
+        #Selects a int from 1 to 18. Not in usage right now
         rand_class = random.randint(1, 18)
         priority_choose: PriorityClass()
 
@@ -229,10 +296,21 @@ class Environment:
         else:
             priority_choose = self.priority_class_list[3]
 
+        '''
+        priority_choose: PriorityClass()
+       
+        priority_choose = self.priority_class_list[0]
+
         #Returns the priority_class selected
         return priority_choose
         
     def reset(self, seed=None, id_simulation=None):
+        self.iter_disaster = -1        
+        self.epicenter_happened = 0
+        self.cascade_happened_73 = 0
+        self.cascade_happened_15 = 0
+        self.cascade_happened_5 = 0
+        self.setup_disaster_zones()
         self.events = []  # event queue
         self._processed_arrivals = 0
         self._rejected_services = 0
@@ -240,6 +318,7 @@ class Environment:
         self.total_hops_disrupted_services = 0.0
         self.total_hops_restaured_services = 0.0
         self.total_hops_relocated_services = 0.0
+        self.cascade_affected_services = 0
 
         self.number_disaster_processed: int = 0
         self.total_expected_loss_cost: float  = 0
@@ -288,6 +367,8 @@ class Environment:
                 #self.topology.nodes[node]['total_units'] = self.topology.degree(node) * self.resource_units_per_link
                 self.topology.nodes[node]['available_units'] = 1800
                 self.topology.nodes[node]['total_units'] = 1800
+                #self.topology.nodes[node]['available_units'] = 700
+                #self.topology.nodes[node]['total_units'] = 700
                 self.topology.nodes[node]['services'] = []
                 self.topology.nodes[node]['running_services'] = []
                 self.topology.nodes[node]['id'] = idx
@@ -302,8 +383,8 @@ class Environment:
                 self.topology.nodes[node]['total_units'] = 0        
 
         self.setup_next_arrival()
-        
-        
+
+
     def setup_next_arrival(self):
         """
         Returns the next arrival to be scheduled in the simulator
@@ -317,8 +398,8 @@ class Environment:
         src_id = self.topology.graph['node_indices'].index(src)
 
         #Randomly picks a class for the service
+        #TODO: use self.rng
         pc:PriorityClass()= self.random_class()
-        print(pc.priority)
 
         self._processed_arrivals += 1
 
@@ -349,17 +430,26 @@ class Environment:
                 self.tracked_results['avg_expected_loss_cost'].append(self.total_expected_loss_cost/self.number_disrupted_services)
                 self.tracked_results['avg_loss_cost'].append(self.total_loss_cost/self.number_disrupted_services)
                 self.tracked_results['avg_hops_disrupted_services'].append(self.total_hops_disrupted_services/self.number_disrupted_services)
-                self.tracked_results['avg_hops_restaured_services'].append(self.total_hops_restaured_services/self.number_disrupted_services)
-                self.tracked_results['avg_hops_relocated_services'].append(self.total_hops_relocated_services/self.number_disrupted_services)
+                self.tracked_results['cascade_affected_services'].append(self.cascade_affected_services)
+                self.tracked_results['avg_services_affected'].append(self.number_disrupted_services/self.number_disaster_occurences)
+                self.tracked_results[ 'avg_failed_before_services'].append(self.failed_again_services)
+                if self.number_restored_services >0:
+                    self.tracked_results['avg_hops_restaured_services'].append(self.total_hops_restaured_services/self.number_restored_services)
+                if self.number_relocated_services > 0:
+                    self.tracked_results['avg_hops_relocated_services'].append(self.total_hops_relocated_services/self.number_relocated_services)
             else:  # if no failures, 100% restorability
                 self.tracked_results['avg_loss_cost'].append(0.0)
                 self.tracked_results['average_restorability'].append(1.)
                 self.tracked_results['average_relocation'].append(0.0)
                 self.tracked_results['avg_expected_capacity_loss'].append(0.0)
-                self.tracked_results['avg_expected_loss_cost'].append(0.0) 
-                self.tracked_results['avg_hops_disrupted_services'].append(0.0)
-                self.tracked_results['avg_hops_restaured_services'].append(0.0)
-                self.tracked_results['avg_hops_relocated_services'].append(0.0)
+                self.tracked_results['avg_expected_loss_cost'].append(0.0)
+                self.tracked_results['cascade_affected_services'].append(0.0)
+                self.tracked_results['avg_services_affected'].append(0.0)
+                self.tracked_results['avg_failed_before_services'].append(0)
+            self.tracked_results['epicenter_happened'].append(self.epicenter_happened)
+            self.tracked_results['cascade_happened_73'].append(self.cascade_happened_73)
+            self.tracked_results['cascade_happened_15'].append(self.cascade_happened_15)
+            self.tracked_results['cascade_happened_5'].append(self.cascade_happened_5)
 
         if self._processed_arrivals % self.plot_tracked_stats_every == 0:
             plots.plot_simulation_progress(self)
@@ -369,9 +459,15 @@ class Environment:
                                holding_time=ht,
                                source=src, 
                                source_id=src_id,
-                               computing_units=random.randint(1, 5),
+                               computing_units=random.randint(1, 5), #TODO: use self.rng
                                priority_class=pc)
         if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):
+            if(self.is_empty(self.current_disaster_zone)):
+                if(self.iter_disaster<3):
+                    self.iter_disaster+=1
+                self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster]
+                
+            
             self.setup_next_disaster()
             self.number_disaster_processed+=1
             self.next_disaster_point += self.disaster_arrivals_interval
@@ -460,46 +556,56 @@ class Environment:
 
    
     def setup_next_disaster(self):
+        self.cascade_affected_services = 0
         if self._processed_arrivals > self.num_arrivals:
             return
-        #zones = []
-        src_tgt = []
-        links_to_fail = []
+            
+        region_to_fail = []
         nodes_to_fail=[]
-        link_src = ""
-        link_tgt = ""
-        tfpath = "config/topologies/"+self.topology_file
-        elementTree = ET.parse(tfpath)
-        root = elementTree.getroot()
+        if(self.current_disaster_zone[0]!=[]):
+            region_to_fail = self.current_disaster_zone[0]
+            self.current_disaster_zone[0] = []
+            self.epicenter_happened = 1
+        else:
+            reg_prob = self.rng.randint(1,100)
+            if reg_prob<73 and self.current_disaster_zone[1]!=[]:
+                region_to_fail = self.current_disaster_zone[1]
+                self.current_disaster_zone[1] = []
+                self.cascade_happened_73 = 1
+            elif reg_prob < 15 and self.current_disaster_zone[2]!=[]:
+                region_to_fail = self.current_disaster_zone[2]
+                self.current_disaster_zone[2] = []
+                self.cascade_happened_15 = 1
+            elif reg_prob < 5 and self.current_disaster_zone[3]!=[]:
+                region_to_fail = self.current_disaster_zone[3]
+                self.current_disaster_zone[3] = []
+                self.cascade_happened_5 = 1
 
-        #for z in root.findall(".//zone"):
-        #    zones.append(z.attrib['id'])
+            else:
+                region_to_fail = []
+                self.cascade_happened_73 = 0
+                self.cascade_happened_15 = 0
+                self.cascade_happened_5 = 0
+                if (self.current_disaster_zone[0] == []):
+                    self.current_disaster_zone[1] = []
+                if (self.current_disaster_zone[1] == []):
+                    self.current_disaster_zone[2] = []
+                if (self.current_disaster_zone[2] == []):
+                    self.current_disaster_zone[3] = []
+                return
+            
+                
+            
+        links_to_fail = []
 
-        zone_to_fail = random.choice(self.disaster_zones)
-        self.disaster_zones.remove(zone_to_fail)
-
-        #Appends links in epicenter to links_to_fail list    
-        for lf in root.findall(".//zone[@id='"+zone_to_fail+"']/region[@id='R0']/disaster_link"):
-            for l_id in root.findall(".//link[@id='"+lf.text+"']/"):
-                if(l_id.text != "\n     "):
-                    src_tgt.append(l_id.text)
-            links_to_fail.append(src_tgt)
-            src_tgt=[]
-
-        #Appends links in epicenter to nodes_to_fail list    
-        for nf in root.findall(".//zone[@id='"+zone_to_fail+"']/region[@id='R0']/disaster_node"):
-            nodes_to_fail.append(nf.text)
-        print(nodes_to_fail)
-        #Sets the probability of nodes in danger regions failing
-        for node in root.findall(".//zone[@id='"+zone_to_fail+"']/region/disaster_node"):
-            self.topology.nodes[node.text]['node_failure_probability'] =float(node.attrib['probability'])
-             
-        for link in root.findall(".//zone[@id='"+zone_to_fail+"']/region/disaster_link"):
-            for src in root.findall(".//link[@id='"+link.text+"']/source"):
-                link_src = src.text
-            for tgt in root.findall(".//link[@id='"+link.text+"']/target"):
-                link_tgt = tgt.text
-            self.topology[link_src][link_tgt]['link_failure_probability'] = float(link.attrib['probability'])
+        for link in region_to_fail:
+            link_src_tgt = []
+            for idx, item in enumerate(link):
+                if idx<2:
+                    link_src_tgt.append(item)
+                else:
+                    self.topology[link_src_tgt[0]][link_src_tgt[1]]['link_failure_probability'] = float(item)    
+            links_to_fail.append(link_src_tgt)
 
         at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
         duration = self.rng.expovariate(1/self.mean_failure_duration)
@@ -585,7 +691,7 @@ class Service:
     holding_time: float
     source: str
     source_id: int
-    priority_class: PriorityClass
+    priority_class: PriorityClass #It is the priority and the rules used to restore this service
     expected_risk: float = 0.0
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
@@ -596,6 +702,7 @@ class Service:
     computing_units: int = field(default=1)
     provisioned: bool = field(default=False)
     failed: bool = field(default=False)
+    failed_before: bool = field(default=False)
     relocated: bool = field(default=False)
     
     def __repr__(self) -> str:
