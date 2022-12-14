@@ -11,18 +11,23 @@ from networkx import Graph
 import routing_policies
 
 def services_sorting(self, services: Sequence['Service']):
-    
+    sorted_services = []
     services_list = []
+
+    #As we have 4 priority classes, we iterate this loop 4 times
     for classidx in range(1,5):
-        print(classidx)
         partial_services_list = []
+
+        #For each priority class, it sorts them according to remaining time
         for s in services:
             if s.priority_class.priority == classidx:
                 partial_services_list.append(s)
         sorted_services = sorted(partial_services_list, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
-            
+
+        #After sorting according to time, it appends the services to an all-services-list, thus sorting it according to priority
         for s in sorted_services:
             services_list.append(s)
+
     services = services_list
     print("Length after", len(services))
     return services
@@ -46,7 +51,6 @@ class RestorationPolicy(abc.ABC):
         """
         service.service_time = self.env.current_time - service.arrival_time
         service.availability = service.service_time / service.holding_time
-
 
 class DoNotRestorePolicy(RestorationPolicy):
     def __init__(self) -> None:
@@ -178,6 +182,7 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
         class1_services = []
         class2_services = []
         
+        #Sorts the services according to priority classes
         services = services_sorting(self, services)
 
         print("Lista de prioridades")

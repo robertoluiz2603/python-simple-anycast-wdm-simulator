@@ -26,57 +26,94 @@ def plot_simulation_progress(env: 'Environment'):
     """
     plt.figure(figsize=(20, 9))
 
-    plt.subplot(3, 3, 1)
+    plt.subplot(4, 3, 1)
     if any(i > 0 for i in env.tracked_results['request_blocking_ratio']):
         plt.semilogy([x * env.track_stats_every for x in range(1, len(env.tracked_results['request_blocking_ratio'])+1)],
                  env.tracked_results['request_blocking_ratio'])
     plt.xlabel('Arrival')
     plt.ylabel('Req. blocking ratio')
 
-    plt.subplot(3, 3, 2)
+    plt.subplot(4, 3, 2)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_link_usage'])+1)],
                  env.tracked_results['average_link_usage'])
     plt.xlabel('Arrival')
     plt.ylabel('Avg. link usage')
 
-    plt.subplot(3, 3, 3)
+    plt.subplot(4, 3, 3)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_node_usage']) + 1)],
              env.tracked_results['average_node_usage'])
     plt.xlabel('Arrival')
     plt.ylabel('Avg. node usage')
 
-    plt.subplot(3, 3, 4)
+    plt.subplot(4, 3, 4)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_availability'])+1)],
                  env.tracked_results['average_availability'])
     plt.xlabel('Arrival')
     plt.ylabel('System avg. availability')
 
-    plt.subplot(3, 3, 5)
+    plt.subplot(4, 3, 5)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_restorability'])+1)],
                  env.tracked_results['average_restorability'])
     plt.xlabel('Arrival')
     plt.ylabel('System avg. restorability')
-    plt.subplot(3, 3, 6)
+    plt.subplot(4, 3, 6)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['average_relocation'])+1)],
                  env.tracked_results['average_relocation'])
     plt.xlabel('Arrival')
     plt.ylabel('DCs avg. relocation')
 
+    '''
     plt.subplot(3, 3, 7)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['avg_expected_loss_cost'])+1)],
                  env.tracked_results['avg_expected_loss_cost'])
     plt.xlabel('Arrival')
     plt.ylabel('Expected capacity loss')
-    plt.subplot(3, 3, 8)
+    '''
+    plt.subplot(4, 3, 7)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['cascade_affected_services'])+1)],
+                 env.tracked_results['cascade_affected_services'])
+    plt.xlabel('Arrival')
+    plt.ylabel('Services affected in cascade')
+
+    plt.subplot(4, 3, 8)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['avg_loss_cost'])+1)],
                  env.tracked_results['avg_loss_cost'])
     plt.xlabel('Arrival')
     plt.ylabel('Average loss cost')
+    '''
     plt.subplot(3, 3, 9)
     plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['avg_expected_loss_cost'])+1)],
                  env.tracked_results['avg_expected_loss_cost'])
     plt.xlabel('Arrival')
-    plt.ylabel('Avarage expected loss cost')    
+    plt.ylabel('Avarage expected loss cost')
+    '''    
+    plt.subplot(4, 3, 9)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['avg_failed_before_services'  ])+1)],
+                 env.tracked_results['avg_failed_before_services'])
+    plt.xlabel('Arrival')
+    plt.ylabel('Services failed before')
+
+    plt.subplot(4, 3, 10)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['cascade_happened_73'  ])+1)],
+                 env.tracked_results['cascade_happened_73'])
+    plt.xlabel('Arrival')
+    plt.ylabel('')
+    plt.subplot(4, 3, 10)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['cascade_happened_15'  ])+1)],
+                 env.tracked_results['cascade_happened_15'])
+    plt.xlabel('Arrival')
+    plt.ylabel('')
+    plt.subplot(4, 3, 10)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['cascade_happened_5'  ])+1)],
+                 env.tracked_results['cascade_happened_5'])
+    plt.xlabel('Arrival')
+    plt.ylabel('')        
+    
+    plt.subplot(4, 3, 10)
+    plt.plot([x * env.track_stats_every for x in range(1, len(env.tracked_results['epicenter_happened'  ])+1)],
+                 env.tracked_results['epicenter_happened'])
+    plt.xlabel('Arrival')
+    plt.ylabel('Cascade/epicenter happened')
     
 
     plt.tight_layout()
@@ -183,6 +220,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
 
     #Below are measurements related to cascading failures.
 
+    '''
     plt.subplot(4, 3, 7)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -196,6 +234,20 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. expected capacity loss')
+    '''
+    plt.subplot(4, 3, 7)
+    has_data = False
+    for id_routing_policy, routing_policy in enumerate(results.keys()):
+        for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
+            if any(results[routing_policy][restoration_policy][load][x]['avg_services_affected'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
+                range(len(results[routing_policy][restoration_policy][load]))):
+                has_data = True
+                plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
+                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_services_affected'] for x in
+                                        range(len(results[routing_policy][restoration_policy][load]))]) for
+                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
+    plt.xlabel('Load [Erlang]')
+    plt.ylabel('Avg. services affected')
     plt.subplot(4, 3, 8)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -209,6 +261,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. loss cost')
+    '''
     plt.subplot(4, 3, 9)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -222,6 +275,20 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. expected loss cost')
+    '''
+    plt.subplot(4, 3, 9)
+    has_data = False
+    for id_routing_policy, routing_policy in enumerate(results.keys()):
+        for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
+            if any(results[routing_policy][restoration_policy][load][x]['avg_failed_before_services'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in
+                range(len(results[routing_policy][restoration_policy][load]))):
+                has_data = True
+                plt.plot([load for load in results[routing_policy][restoration_policy].keys()],
+                                [np.mean([results[routing_policy][restoration_policy][load][x]['avg_failed_before_services'] for x in
+                                        range(len(results[routing_policy][restoration_policy][load]))]) for
+                                load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
+    plt.xlabel('Load [Erlang]')
+    plt.ylabel('Avg. services failed before')
 
     plt.subplot(4, 3, 10)
     has_data = False

@@ -94,7 +94,7 @@ def run(uargs):
                 #if restoration_policy == 'DNR':
                 #    restoration_policy_instance = restoration_policies.DoNotRestorePolicy()
                 #if restoration_policy == 'PR':
-                    restoration_policy_instance = restoration_policies.PathRestorationPolicy()
+                #    restoration_policy_instance = restoration_policies.PathRestorationPolicy()
                 if restoration_policy == 'PRwR':
                     restoration_policy_instance = restoration_policies.PathRestorationWithRelocationPolicy()
                 elif restoration_policy == 'PRPA':
@@ -116,9 +116,13 @@ def run(uargs):
                 
                 # if load == 600 and routing_policy == 'CADC':
                 
+                '''
                 core.run_simulation(env_t)
                 print("Ran in debug mode... exiting...")
                 exit(0)
+                '''
+                
+                
                 
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
