@@ -7,12 +7,20 @@ import networkx as nx
 import numpy as np
 
 
+
 def get_k_shortest_paths(graph, source, target, k, weight=None):
     """
     Method from https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.shortest_simple_paths.html#networkx.algorithms.simple_paths.shortest_simple_paths
     """
     return list(islice(nx.shortest_simple_paths(graph, source, target, weight=weight), k))
 
+def get_k_safest_paths(graph, source, target, k, weight=None):
+    """
+    Method from https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.shortest_simple_paths.html#networkx.algorithms.simple_paths.shortest_simple_paths
+    """
+    #Link: [origem, destino, probabilidade]
+    return list(islice(nx.shortest_simple_paths(graph, source, target, weight=graph[source][target]['link_failure_probability']), k))
+    #return list(islice(nx.shortest_simple_paths(graph, source, target, weight=weight), k))
 
 def get_path_weight(graph, path, weight='length'):
     return np.sum([graph[path[i]][path[i+1]][weight] for i in range(len(path) - 1)])
@@ -170,12 +178,12 @@ def get_ksp(args, topology):
     return topology
 
 #TODO: Get actual link probability
-"""def get_probability_ksp(args, topology):
+def get_probability_ksp(args, topology):
     k_shortest_paths = {}
 
     for idn1, n1 in enumerate(topology.graph['source_nodes']):
         for idn2, n2 in enumerate(topology.graph['dcs']):
-            paths = get_k_shortest_paths(topology, n1, n2, args.k_paths)
+            paths = get_k_safest_paths(topology, n1, n2, args.k_paths)
             lengths = [get_path_weight(topology, path) for path in paths]
             objs = []
             for path, length in zip(paths, lengths):
@@ -185,4 +193,3 @@ def get_ksp(args, topology):
             k_shortest_paths[n2, n1] = objs
     topology.graph['prob_ksp'] = k_shortest_paths
     return topology
-"""
