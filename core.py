@@ -70,6 +70,8 @@ class Environment:
         #self.mean_failure_inter_arrival_time: float = 1000.#by juliana
         self.mean_failure_inter_arrival_time: float = 100000. #original
         self.mean_failure_duration: float = 86400.0
+        
+        self.time_aux_for_next_cascade:float = self.mean_failure_inter_arrival_time#juliana
 
         self.mean_service_inter_arrival_time: float = 0.0
         if args is not None and hasattr(args, 'load') and load is None:
@@ -117,18 +119,19 @@ class Environment:
         #         as cascatas são espaçadas em funão de um percentagem =10%?? de disaster_arrivals_interval 
 
         #self.disaster_arrivals_interval:int = int(self.num_arrivals/ (self.number_disaster_occurences+0.5))
-        self.disaster_arrivals_interval:int = int(self.num_arrivals/ (self.number_disaster_zones+0.5))
-        self.next_disaster_point:int = int(self.disaster_arrivals_interval)
+        self.disaster_epicenter_arrivals_interval:int = int(self.num_arrivals/ (self.number_disaster_zones+0.5))
+        self.next_disaster_point:int = int(self.disaster_epicenter_arrivals_interval)
         #print("=============init=== ")
         #print("==num_arrivals ", self.num_arrivals)
         #print("==num disaster ", self.number_disaster_occurences)
-        #print("==interval ", self.disaster_arrivals_interval)
+        #print("==interval ", self.disaster_epicenter_arrivals_interval)
 
 
         #para gerar o intervalo das cascatas (juliana)
         #TODO: deixar dinâmico em funcao do tempo ou chegadas
-        #self.disaster_cascade_arrivals_interval:int = int(self.disaster_arrivals_interval *0.05)
-        self.disaster_cascade_arrivals_interval:int = int(self.disaster_arrivals_interval *450)  
+        #self.disaster_cascade_arrivals_interval:int = int(self.disaster_epicenter_arrivals_interval *0.05)
+        
+        self.disaster_cascade_arrivals_interval:int = 450
         
         self.topology_file: str = "nobel-us.xml"  #"nobel-us.xml" #"test-topo.xml"
         self.topology_name: str = 'nobel-us'
@@ -201,8 +204,6 @@ class Environment:
 
         self.logger = logging.getLogger(f'env-{self.load}')  # TODO: colocar outras informacoes necessarias
         self.priority_class_list = self.priority_class_inicialization()
-
-        
 
     def setup_disaster_zones(self):
         self.current_disaster_zone = []
@@ -289,7 +290,7 @@ class Environment:
             'cascade_happened_5': self.cascade_happened_5,
             'epicenter_happened': self.epicenter_happened
         })
-        
+        '''
         if(self.number_relocated_services>0):
             self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'avg_hops_relocated_services': self.total_hops_relocated_services/self.number_relocated_services
@@ -298,6 +299,7 @@ class Environment:
             self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'avg_hops_relocated_services': 0
             })
+        '''
         
     def is_empty(self, list):
         empty = 1
@@ -376,7 +378,7 @@ class Environment:
         if id_simulation is not None:
             self.id_simulation = id_simulation
 
-        self.next_disaster_point = self.disaster_arrivals_interval
+        self.next_disaster_point = self.disaster_epicenter_arrivals_interval
         
         self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4']
 
@@ -492,44 +494,93 @@ class Environment:
                                computing_units=random.randint(1, 5), #TODO: use self.rng
                                priority_class=pc)
         #print("==passagem==")                       
-        #print("self._processed_arrivals ", self._processed_arrivals) 
+         
         #print("self.next_disaster_point ", self.next_disaster_point)
         #print("self.number_disaster_processed ", self.number_disaster_processed)
         #print("self.number_disaster_occurences ",self.number_disaster_occurences)
-        if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):
-            print(">>>entra>>>");
+        #print(">>>before >>> ", self._processed_arrivals)
+        if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):       
             if(self.is_empty(self.current_disaster_zone)):
                 if(self.iter_disaster<3):
                     self.iter_disaster+=1
                 self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster]
             
             self.setup_next_disaster()
-            self.number_disaster_processed+=1 
-            
+            self.number_disaster_processed+=1
+            # 1 - epc - 5 - 9 - 13
+            # 2 - 73% - 6 - 10 - 14
+            # 3 - 15% - 7 - 11 - 15
+            # 4 - 5%  - 8 - 12 - 16 
             #TODO: rever para não ficar estático (juliana)
+            #==estático
             #if next fail is an epicente
             if(self.number_disaster_processed == 4):
-                self.next_disaster_point = (self.disaster_arrivals_interval*2)
+                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*2)
             elif(self.number_disaster_processed == 8):
-                self.next_disaster_point = (self.disaster_arrivals_interval*3)
+                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*3)
             elif(self.number_disaster_processed == 12):
-                self.next_disaster_point = (self.disaster_arrivals_interval*4)
+                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*4)
             elif(self.number_disaster_processed == 16):
-                self.next_disaster_point = (self.disaster_arrivals_interval*5)                    
+                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*5)                    
             else:#if next fail is an cascade
                 self.next_disaster_point += self.disaster_cascade_arrivals_interval
-                at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
 
-            print("88====never here====88") 
-            print("escala self.number_disaster_processed: ", self.number_disaster_processed)
-            print("self.disaster_arrivals_interval: ", self.disaster_arrivals_interval)
+            print("====self._processed_arrivals: ",self._processed_arrivals)
+            print("self.number_disaster_processed: ", self.number_disaster_processed)
+            print("self.disaster_epicenter_arrivals_interval: ", self.disaster_epicenter_arrivals_interval)
             print("self.disaster_cascade_arrivals_interval: ", self.disaster_cascade_arrivals_interval)
-            print("self.next_disaster_point: ",self.next_disaster_point)
-            
-              
-
+            print("self.next_disaster_point: ",self.next_disaster_point)       
+        
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
+
+        #if(self.number_disaster_processed<self.number_disaster_occurences):
+            ##if next fail is an epicente    
+            #if(self._processed_arrivals == self.next_disaster_point):     
+                #if(self.is_empty(self.current_disaster_zone)):
+                    #if(self.iter_disaster<3):
+                        #self.iter_disaster+=1
+                    #self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster]
+            
+                #self.setup_next_disaster()
+            
+                #self.number_disaster_processed+=1
+                #print(">>>entra next_disaster_point>>>")
+            
+                #if(self.number_disaster_processed == 1):
+                #   self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*2)
+                #elif(self.number_disaster_processed == 5):
+                #    self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*3)
+                #elif(self.number_disaster_processed == 9):
+                #    self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*4)            
+                
+                #print("self.time_aux_for_next_cascade: ",self.time_aux_for_next_cascade)
+                #print("====self._processed_arrivals: ",self._processed_arrivals)
+                #print("self.number_disaster_processed: ", self.number_disaster_processed)
+                #print("self.disaster_epicenter_arrivals_interval: ", self.disaster_epicenter_arrivals_interval)
+                ##print("self.disaster_cascade_arrivals_interval: ", self.disaster_cascade_arrivals_interval)
+                #print("self.next_disaster_point: ",self.next_disaster_point)
+
+            #elif ((self.current_time > self.time_aux_for_next_cascade) and (self.number_disaster_processed != 0) and (self.number_disaster_processed != 4) and (self.number_disaster_processed != 8) and (self.number_disaster_processed != 12)):    
+            #    print(">>>entra current_time>>>")
+            #    if(self.is_empty(self.current_disaster_zone)):
+            #        if(self.iter_disaster<3):
+            #            self.iter_disaster+=1
+            #        self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster]
+            
+            #    self.setup_next_disaster()
+            
+            #    self.number_disaster_processed+=1
+            #    print("self.current_time: ",self.current_time)
+            #    print("self.time_aux_for_next_cascade: ",self.time_aux_for_next_cascade)
+            #    print("====self._processed_arrivals: ",self._processed_arrivals)
+            #    print("self.number_disaster_processed: ", self.number_disaster_processed)
+            #    print("self.disaster_epicenter_arrivals_interval: ", self.disaster_epicenter_arrivals_interval)
+            #print("self.disaster_cascade_arrivals_interval: ", self.disaster_cascade_arrivals_interval)
+            #    print("self.next_disaster_point: ",self.next_disaster_point)
+                     
+        #self.services.append(next_arrival)
+        #self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
 
     def set_load(self, load=None, mean_service_holding_time=None):
         if load is not None:
@@ -618,40 +669,40 @@ class Environment:
             
         region_to_fail = []
         nodes_to_fail=[]
-        if(self.current_disaster_zone[0]!=[]):
+
+        if len(self.current_disaster_zone[0]) != 0:
             region_to_fail = self.current_disaster_zone[0]
             self.current_disaster_zone[0] = []
-            self.epicenter_happened = 1    
+            self.epicenter_happened = 1
         else:
             reg_prob = self.rng.randint(1,100)
             if reg_prob <= 73 and self.current_disaster_zone[1]!=[]:
                 region_to_fail = self.current_disaster_zone[1]
                 self.current_disaster_zone[1] = []
                 self.cascade_happened_73 = 1
-            elif reg_prob <= 15 and self.current_disaster_zone[2]!=[]:
+            else:
+                self.cascade_happened_73 = 0
+                self.current_disaster_zone[1] = []
+                return
+            
+            if reg_prob <= 15 and self.current_disaster_zone[2]!=[]:
                 region_to_fail = self.current_disaster_zone[2]
                 self.current_disaster_zone[2] = []
                 self.cascade_happened_15 = 1
-            elif reg_prob <= 5 and self.current_disaster_zone[3]!=[]:
+            else:
+                self.cascade_happened_15 = 0
+                self.current_disaster_zone[2] = []
+                return
+
+            if reg_prob <= 5 and self.current_disaster_zone[3]!=[]:
                 region_to_fail = self.current_disaster_zone[3]
                 self.current_disaster_zone[3] = []
                 self.cascade_happened_5 = 1
-
             else:
-                region_to_fail = []
-                self.cascade_happened_73 = 0
-                self.cascade_happened_15 = 0
                 self.cascade_happened_5 = 0
-                if (self.current_disaster_zone[0] == []):
-                    self.current_disaster_zone[1] = []
-                if (self.current_disaster_zone[1] == []):
-                    self.current_disaster_zone[2] = []
-                if (self.current_disaster_zone[2] == []):
-                    self.current_disaster_zone[3] = []
+                self.current_disaster_zone[3] = []
                 return
-            
-                
-            
+
         links_to_fail = []
 
         for link in region_to_fail:
@@ -663,9 +714,12 @@ class Environment:
                     self.topology[link_src_tgt[0]][link_src_tgt[1]]['link_failure_probability'] = float(item)    
             links_to_fail.append(link_src_tgt)
 
+        # TODO: avaliar se o tempo entre duas falhas em cascata é o mesmo que o tempo entre desastres
         at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
 
         duration = self.rng.expovariate(1/self.mean_failure_duration)
+
+        self.time_aux_for_next_cascade = (at + duration)#juliana
 
       #  print("para verificacao--- current_time: ", self.current_time)
       #  print("at: ", at)

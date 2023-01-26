@@ -5,6 +5,7 @@ from xml.dom.minidom import parse
 import xml.dom.minidom
 import networkx as nx
 import numpy as np
+import xml.etree.ElementTree as ET
 
 
 
@@ -12,19 +13,21 @@ def get_k_shortest_paths(graph, source, target, k, weight=None):
     """
     Method from https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.shortest_simple_paths.html#networkx.algorithms.simple_paths.shortest_simple_paths
     """
+    print("teste ksp")
     return list(islice(nx.shortest_simple_paths(graph, source, target, weight=weight), k))
 
 def get_k_safest_paths(graph, source, target, k, weight=None):
+#def get_k_safest_paths(graph, source, target, k, weight='link_failure_probability'): 
     """
     Method from https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.simple_paths.shortest_simple_paths.html#networkx.algorithms.simple_paths.shortest_simple_paths
     """
-    #Link: [origem, destino, probabilidade]
-    return list(islice(nx.shortest_simple_paths(graph, source, target, weight=graph[source][target]['link_failure_probability']), k))
+    print("graph:get_k_safest_paths")
+    print(source, "--", target)
+    return list(islice(nx.shortest_simple_paths(graph, source, target, weight='link_failure_probability'), k))
     #return list(islice(nx.shortest_simple_paths(graph, source, target, weight=weight), k))
 
-def get_path_weight(graph, path, weight='length'):
+def get_path_weight(graph, path, weight):
     return np.sum([graph[path[i]][path[i+1]][weight] for i in range(len(path) - 1)])
-
 
 class Path:
 
@@ -77,7 +80,6 @@ def read_sndlib_topology(file):
                 latlong1 = graph.nodes[source.childNodes[0].data]["pos"]
                 latlong2 = graph.nodes[target.childNodes[0].data]["pos"]
                 length = np.around(math.sqrt((latlong1[0] - latlong2[0]) ** 2 + (latlong1[1] - latlong2[1]) ** 2), 3)
-
             
             weight = 1.0
             graph.add_edge(source.childNodes[0].data, target.childNodes[0].data,
@@ -87,6 +89,8 @@ def read_sndlib_topology(file):
     for idx, node in enumerate(graph.nodes()):
         graph.graph["node_indices"].append(node)
 
+    for idx, lnk in enumerate(graph.edges()):
+        graph[lnk[0]][lnk[1]]['link_failure_probability'] = 0
     return graph
 
 
@@ -125,8 +129,8 @@ def get_topology(args):
         topology = read_txt_file(args.topology_file, args.topology_file.replace(".txt", ""))
     else:
         raise ValueError(f'Supplied topology  `{args.topology_file}` is unknown')
+    topology = set_failure_probabilities(args, topology)
     return topology
-
 
 def get_dcs(args, topology):
     topology.graph['source_nodes'] = []
@@ -162,12 +166,13 @@ def get_dcs(args, topology):
 
 
 def get_ksp(args, topology):
+    print("teste passagem ksp")
     k_shortest_paths = {}
 
     for idn1, n1 in enumerate(topology.graph['source_nodes']):
         for idn2, n2 in enumerate(topology.graph['dcs']):
             paths = get_k_shortest_paths(topology, n1, n2, args.k_paths)
-            lengths = [get_path_weight(topology, path) for path in paths]
+            lengths = [get_path_weight(topology, path, 'length') for path in paths]
             objs = []
             for path, length in zip(paths, lengths):
                 objs.append(Path(path, length))
@@ -179,12 +184,15 @@ def get_ksp(args, topology):
 
 #TODO: Get actual link probability
 def get_probability_ksp(args, topology):
+    print("passa ")
     k_shortest_paths = {}
-
+    
     for idn1, n1 in enumerate(topology.graph['source_nodes']):
         for idn2, n2 in enumerate(topology.graph['dcs']):
+            print("chama === ",args.k_paths)
             paths = get_k_safest_paths(topology, n1, n2, args.k_paths)
-            lengths = [get_path_weight(topology, path) for path in paths]
+            print("retorna s_safest")
+            lengths = [get_path_weight(topology, path, 'link_failure_probability') for path in paths]
             objs = []
             for path, length in zip(paths, lengths):
                 objs.append(Path(path, length))
@@ -192,4 +200,20 @@ def get_probability_ksp(args, topology):
             k_shortest_paths[n1, n2] = objs
             k_shortest_paths[n2, n1] = objs
     topology.graph['prob_ksp'] = k_shortest_paths
+    return topology
+
+def set_failure_probabilities(args,topology):
+    tf: str = args.topology_file
+    tfpath = "config/topologies/"+tf
+    elementTree = ET.parse(tfpath)
+    root = elementTree.getroot()
+
+    for zone in root.findall(".//zone"):
+        for region in root.findall(".//zone[@id='"+zone.attrib['id']+"']/region"):
+            for link in root.findall(".//zone[@id='"+zone.attrib['id']+"']/region[@id='"+region.attrib['id']+"']/disaster_link"):
+                for src in root.findall(".//link[@id='"+link.text+"']/source"):
+                    link_src = src.text
+                for tgt in root.findall(".//link[@id='"+link.text+"']/target"):
+                    link_tgt = tgt.text
+                topology[link_src][link_tgt]['link_failure_probability'] = float(link.attrib['probability'])
     return topology

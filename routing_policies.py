@@ -154,9 +154,9 @@ def get_safest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
     aux_list = [0,0,0,0]
     aux_dict = []
     if topology.nodes[service.destination]['available_units'] >= service.computing_units:
-        
         paths = topology.graph['prob_ksp'][service.source, service.destination]
         print(len(paths))
+        
         for p in paths:
             if(is_path_viable(topology, p, service.network_units)):
                 viable_paths.append(p)

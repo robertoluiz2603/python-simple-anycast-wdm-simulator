@@ -27,7 +27,7 @@ def run(uargs):
     topology = graph.get_topology(uargs)
     topology = graph.get_dcs(uargs, topology)
     topology = graph.get_ksp(uargs, topology)
-    #topology = graph.get_probability_ksp(uargs, topology)
+    topology = graph.get_probability_ksp(uargs, topology)    
     env = core.Environment(uargs, topology=topology)
 
     logger = logging.getLogger('run')
@@ -36,8 +36,10 @@ def run(uargs):
     #, 'FADC', 'FLB'
     exec_routing_policies = ['CADC']
     #'PR','DNR','PRCA'
-    exec_restoration_policies = ['PRPA','PRwR']
+    #exec_restoration_policies = ['PRPA','PRwR']
+    exec_restoration_policies = ['PRPA']
     loads = [x for x in range(args.min_load, args.max_load + 1, args.load_step)]
+    #loads = [x for x in range(args.min_load, args.min_load + 1, args.load_step)]
 
     final_output_folder = env.output_folder + '/' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S.%fUTC')
     env.output_folder = final_output_folder
@@ -116,11 +118,12 @@ def run(uargs):
                 
                 # if load == 600 and routing_policy == 'CADC':
                 
-                '''
+                
                 core.run_simulation(env_t)
                 print("Ran in debug mode... exiting...")
-                exit(0)              
-                '''
+                exit(0)
+                        
+                
 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses

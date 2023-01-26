@@ -250,9 +250,13 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
             bool: _description_
         """
         
+        #print("chama safest")
         # tries to get a path
-        path: Optional['Path'] = routing_policies.get_safest_path(self.env.topology, service)
-
+        print("entrada>>get_safest_path")
+        path: Optional['Path'] = routing_policies.get_safest_path(self.env.topology, service) 
+        #print("get_safest_path>>saida")
+        #path: Optional['Path'] = routing_policies.get_shortest_path(self.env.topology, service)#(juliana alteracao)
+        #print("returned by safest: ")
         # if a path was found, sets it and returns true
         if path is not None:
             service.route = path
@@ -274,7 +278,7 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         Returns:
             _type_: _description_
         """
-        success, dc, path = self.env.routing_policy.route(service)
+        success, dc, path = self.env.routing_policy.route(service)#duvida: onde?
         if success:
             service.route = path
             print("Realocou")

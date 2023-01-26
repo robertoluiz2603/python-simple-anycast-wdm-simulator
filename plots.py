@@ -133,6 +133,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     markers = ['', 'x', 'o', '*']
     line_styles = ['-', '--', ':', '-.']
     plt.figure(figsize=(12, 9))
+    #comentado por juliana pq estava com erro
     plt.subplot(4, 3, 1)
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -142,7 +143,8 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                 for load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Req. blocking ratio')
-
+    
+    
     plt.subplot(4, 3, 2)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -303,7 +305,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. hops_all_disrupted_services')
-
+    '''
     plt.subplot(4, 3, 11)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -331,7 +333,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{routing_policy}/{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. hops_relocated_services')
-
+    '''
     total_simulations = num_routing_policies * num_restoration_policies * env.num_seeds
     performed_simulations = np.sum([len(results[p][l]) for p in results.keys() for l in results[p].keys()])
 
