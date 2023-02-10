@@ -36,7 +36,7 @@ class Environment:
         self.epicenter_happened = 0
         self.cascade_happened_73 = 0
         self.cascade_happened_15 = 0
-        self.cascade_happened_0 = 0
+        self.cascade_happened_5 = 0
         #self.priority_classes:float = [ 0.000003, 0.00000375]
 
         self.total_expected_loss_cost: float  = 0
@@ -44,8 +44,8 @@ class Environment:
         self.total_loss_cost: float = 0
 
         self.total_expected_capacity_loss: float = 0
-
-        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4']
+        #, 'Z5', 'Z6','Z7','Z8', 'Z9','Z10'
+        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4','Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10', 'Z11', 'Z12', 'Z13', 'Z14','Z15', 'Z16', 'Z17', 'Z18', 'Z19', 'Z20']
         #total number os disaster zones (juliana)
         self.number_disaster_zones: int = len(self.disaster_zones)
         #total number of disaster during a simulation
@@ -53,7 +53,7 @@ class Environment:
         self.number_disaster_processed: int = 0
         
         self.current_disaster_zone = []
-        
+        self.aux_disaster_zone = []
         # total number of services disrupted by failures
         self.number_disrupted_services: int = 0
         # total number of services restored from failures
@@ -131,7 +131,7 @@ class Environment:
         #TODO: deixar dinâmico em funcao do tempo ou chegadas
         #self.disaster_cascade_arrivals_interval:int = int(self.disaster_epicenter_arrivals_interval *0.05)
         
-        self.disaster_cascade_arrivals_interval:int = 450
+        self.disaster_cascade_arrivals_interval:int = 10
         
         self.topology_file: str = "nobel-us.xml"  #"nobel-us.xml" #"test-topo.xml"
         self.topology_name: str = 'nobel-us'
@@ -238,6 +238,8 @@ class Environment:
             for idx, r in enumerate(z):
                 print("Regiao ", idx)
                 print(r)
+        print("LISTA tamanho: ", len(self.disaster_zones_list))
+
         return self.disaster_zones_list
 
     def priority_class_inicialization(self):
@@ -267,7 +269,24 @@ class Environment:
                 total_service_time += service.service_time
                 total_holding_time += service.holding_time
         # add here the code to include other statistics you may want
+        avg_hops_restaured_services = 0
+        average_restorability = 1
+        average_relocation = 0
+        avg_loss_cost = 0
+        avg_expected_loss_cost = 0
+        avg_hops_disrupted_services = 0
+        
+        if self.number_disrupted_services >0:
+            average_restorability= self.number_restored_services / self.number_disrupted_services
+            average_relocation= self.number_relocated_services / self.number_disrupted_services
+            avg_loss_cost= self.total_loss_cost/self.number_disrupted_services
+            avg_expected_loss_cost= self.total_expected_loss_cost/self.number_disrupted_services
+            avg_expected_capacity_loss= self.total_expected_capacity_loss/self.number_disrupted_services
+            avg_hops_disrupted_services= self.total_hops_disrupted_services/self.number_disrupted_services
 
+        if self.number_restored_services > 0:
+            avg_hops_restaured_services = self.total_hops_restaured_services/self.number_restored_services
+        
         self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'request_blocking_ratio': self.get_request_blocking_ratio(),
             'average_link_usage': np.mean([self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()]),
@@ -275,13 +294,13 @@ class Environment:
             'average_node_usage': np.mean([self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']]),
             'individual_node_usage': {node: self.topology.nodes[node]['utilization'] for node in self.topology.graph['dcs']},
             'average_availability': total_service_time / total_holding_time,
-            'average_restorability': self.number_restored_services / self.number_disrupted_services,
-            'average_relocation': self.number_relocated_services / self.number_disrupted_services,
-            'avg_loss_cost': self.total_loss_cost/self.number_disrupted_services,
-            'avg_expected_loss_cost': self.total_expected_loss_cost/self.number_disrupted_services,
-            'avg_expected_capacity_loss': self.total_expected_capacity_loss/self.number_disrupted_services,
-            'avg_hops_disrupted_services': self.total_hops_disrupted_services/self.number_disrupted_services,
-            'avg_hops_restaured_services': self.total_hops_restaured_services/self.number_restored_services,
+            'average_restorability': average_restorability,
+            'average_relocation': average_relocation,
+            'avg_loss_cost': avg_loss_cost,
+            'avg_expected_loss_cost': avg_expected_loss_cost,
+            'avg_expected_capacity_loss': avg_expected_capacity_loss,
+            'avg_hops_disrupted_services': avg_hops_disrupted_services,
+            'avg_hops_restaured_services': avg_hops_restaured_services,
             'cascade_affected_services': self.cascade_affected_services,
             'avg_services_affected': self.number_disrupted_services/self.number_disaster_occurences,
             'avg_failed_before_services': self.failed_again_services,
@@ -290,16 +309,6 @@ class Environment:
             'cascade_happened_5': self.cascade_happened_5,
             'epicenter_happened': self.epicenter_happened
         })
-        '''
-        if(self.number_relocated_services>0):
-            self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
-            'avg_hops_relocated_services': self.total_hops_relocated_services/self.number_relocated_services
-            })
-        else:
-            self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
-            'avg_hops_relocated_services': 0
-            })
-        '''
         
     def is_empty(self, list):
         empty = 1
@@ -379,8 +388,9 @@ class Environment:
             self.id_simulation = id_simulation
 
         self.next_disaster_point = self.disaster_epicenter_arrivals_interval
-        
-        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4']
+        #, 'Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10'
+        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4','Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10', 'Z11', 'Z12', 'Z13', 'Z14','Z15', 'Z16', 'Z17', 'Z18', 'Z19', 'Z20']
+        self.repeat_disaster = 1
 
         # (re)-initialize the graph
         self.topology.graph['running_services'] = []
@@ -393,6 +403,7 @@ class Environment:
             self.topology[lnk[0]][lnk[1]]['utilization'] = 0.0
             self.topology[lnk[0]][lnk[1]]['last_update'] = 0.0
             self.topology[lnk[0]][lnk[1]]['link_failure_probability'] = 0
+            self.topology[lnk[0]][lnk[1]]['current_failure_probability'] = 0
         for idx, node in enumerate(self.topology.nodes()):
             if self.topology.nodes[node]['dc']:
                 #self.topology.nodes[node]['available_units'] = self.topology.degree(node) * self.resource_units_per_link
@@ -467,8 +478,12 @@ class Environment:
                 self.tracked_results[ 'avg_failed_before_services'].append(self.failed_again_services)
                 if self.number_restored_services >0:
                     self.tracked_results['avg_hops_restaured_services'].append(self.total_hops_restaured_services/self.number_restored_services)
+                else:
+                    self.tracked_results['avg_hops_restaured_services'].append(0)
                 if self.number_relocated_services > 0:
                     self.tracked_results['avg_hops_relocated_services'].append(self.total_hops_relocated_services/self.number_relocated_services)
+                else:
+                    self.tracked_results['avg_hops_relocated_services'].append(0)
             else:  # if no failures, 100% restorability
                 self.tracked_results['avg_loss_cost'].append(0.0)
                 self.tracked_results['average_restorability'].append(1.)
@@ -499,11 +514,24 @@ class Environment:
         #print("self.number_disaster_processed ", self.number_disaster_processed)
         #print("self.number_disaster_occurences ",self.number_disaster_occurences)
         #print(">>>before >>> ", self._processed_arrivals)
+        epic_list = ['1176', '2352', '3528', '4704', '5880', '7056', '8232', '9408']
+        for epic in epic_list:
+            if self._processed_arrivals == int(epic):
+                print("DISASTER:: Breakpoint")
         if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):       
+            print("DISASTER:: Atingiu ponto de evento")
             if(self.is_empty(self.current_disaster_zone)):
-                if(self.iter_disaster<3):
-                    self.iter_disaster+=1
-                self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster]
+                if(self.iter_disaster<len(self.disaster_zones)-1):
+                    self.iter_disaster+=1    
+                self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster].copy()
+
+                if len(self.aux_disaster_zone)>0:
+                    for region in self.aux_disaster_zone:
+                        for link in region:
+                            self.topology[link[0]][link[1]]['current_failure_probability'] = 0
+                print(self.number_disaster_processed)
+                print(self.current_disaster_zone)
+                self.aux_disaster_zone = self.current_disaster_zone.copy()
             
             self.setup_next_disaster()
             self.number_disaster_processed+=1
@@ -514,16 +542,14 @@ class Environment:
             #TODO: rever para não ficar estático (juliana)
             #==estático
             #if next fail is an epicente
-            if(self.number_disaster_processed == 4):
-                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*2)
-            elif(self.number_disaster_processed == 8):
-                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*3)
-            elif(self.number_disaster_processed == 12):
-                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*4)
-            elif(self.number_disaster_processed == 16):
-                self.next_disaster_point = (self.disaster_epicenter_arrivals_interval*5)                    
+            print("Arrivals:: ", self._processed_arrivals) 
+            if(self.number_disaster_processed%4==0):
+                self.next_disaster_point = int((self.disaster_epicenter_arrivals_interval*((self.number_disaster_processed/4)+1)))
+                print("DISASTER:: Proximo epicentro = ", self.next_disaster_point)                  
             else:#if next fail is an cascade
-                self.next_disaster_point += self.disaster_cascade_arrivals_interval
+                self.next_disaster_point += int(self.disaster_epicenter_arrivals_interval/6)
+                print("DISASTER:: Proxima cascata = ", self.next_disaster_point)
+                
 
             print("====self._processed_arrivals: ",self._processed_arrivals)
             print("self.number_disaster_processed: ", self.number_disaster_processed)
@@ -661,46 +687,53 @@ class Environment:
 
         self.add_event(Event(failure.arrival_time, events.link_failure_arrival, failure))
 
-   
+   # The following function executes a disaster according 
+   # to the disaster_zones_list, formed by zones and regions 
+   # as in the topology file. It tests a link failure odds 
+   # of a disaster happening.
     def setup_next_disaster(self):
         self.cascade_affected_services = 0
         if self._processed_arrivals > self.num_arrivals:
             return
-            
         region_to_fail = []
         nodes_to_fail=[]
-
-        if len(self.current_disaster_zone[0]) != 0:
-            region_to_fail = self.current_disaster_zone[0]
+        if(self.current_disaster_zone[0]!=[]):
+            for region in self.current_disaster_zone:
+                for link in region:
+                    self.topology[link[0]][link[1]]['current_failure_probability'] = float(link[2])
+                    
+            region_to_fail = self.current_disaster_zone[0].copy()
             self.current_disaster_zone[0] = []
             self.epicenter_happened = 1
         else:
             reg_prob = self.rng.randint(1,100)
             if reg_prob <= 73 and self.current_disaster_zone[1]!=[]:
-                region_to_fail = self.current_disaster_zone[1]
+                region_to_fail = self.current_disaster_zone[1].copy()
                 self.current_disaster_zone[1] = []
                 self.cascade_happened_73 = 1
-            else:
-                self.cascade_happened_73 = 0
-                self.current_disaster_zone[1] = []
-                return
-            
-            if reg_prob <= 15 and self.current_disaster_zone[2]!=[]:
-                region_to_fail = self.current_disaster_zone[2]
+            elif reg_prob <= 15 and self.current_disaster_zone[2]!=[]:
+                region_to_fail = self.current_disaster_zone[2].copy()
                 self.current_disaster_zone[2] = []
                 self.cascade_happened_15 = 1
-            else:
-                self.cascade_happened_15 = 0
-                self.current_disaster_zone[2] = []
-                return
-
-            if reg_prob <= 5 and self.current_disaster_zone[3]!=[]:
-                region_to_fail = self.current_disaster_zone[3]
+            elif reg_prob <= 5 and self.current_disaster_zone[3]!=[]:
+                region_to_fail = self.current_disaster_zone[3].copy()
                 self.current_disaster_zone[3] = []
                 self.cascade_happened_5 = 1
+
             else:
+                region_to_fail = []
+                self.cascade_happened_73 = 0
+                self.cascade_happened_15 = 0
                 self.cascade_happened_5 = 0
-                self.current_disaster_zone[3] = []
+
+                #Reverting the order below would result in skipping the next regions to be processed
+                if (self.current_disaster_zone[2] == []):
+                    self.current_disaster_zone[3] = []
+                elif (self.current_disaster_zone[1] == []):
+                    self.current_disaster_zone[2] = []
+                elif (self.current_disaster_zone[0] == []):
+                    self.current_disaster_zone[1] = []
+
                 return
 
         links_to_fail = []
@@ -710,8 +743,6 @@ class Environment:
             for idx, item in enumerate(link):
                 if idx<2:
                     link_src_tgt.append(item)
-                else:
-                    self.topology[link_src_tgt[0]][link_src_tgt[1]]['link_failure_probability'] = float(item)    
             links_to_fail.append(link_src_tgt)
 
         # TODO: avaliar se o tempo entre duas falhas em cascata é o mesmo que o tempo entre desastres
@@ -842,7 +873,7 @@ class DisasterFailure:
     nodes: Sequence[str]
     arrival_time: float
     duration: float
-
+    
 @dataclass
 class Event:
     """

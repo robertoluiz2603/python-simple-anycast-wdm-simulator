@@ -278,7 +278,8 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         Returns:
             _type_: _description_
         """
-        success, dc, path = self.env.routing_policy.route(service)#duvida: onde?
+        #success, dc, path = self.env.routing_policy.route(service)#duvida: onde?
+        success, dc, path = self.env.routing_policy.route(service)
         if success:
             service.route = path
             print("Realocou")

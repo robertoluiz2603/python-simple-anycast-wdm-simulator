@@ -34,7 +34,7 @@ class ClosestAvailableDC(RoutingPolicy):
         closest_path = None
         for iddc, dc in enumerate(self.env.topology.graph['dcs']):
             if self.env.topology.nodes[dc]['available_units'] >= service.computing_units:
-                paths = self.env.topology.graph['ksp'][service.source, dc]
+                paths = self.env.topology.graph['ksp'][service.source, dc] #Pegar o service.dest ao inves do source
                 for idp, path in enumerate(paths):
                     if is_path_viable(self.env.topology, path, service.network_units) and closest_path_hops > path.hops:
                         closest_path_hops = path.hops
@@ -42,7 +42,6 @@ class ClosestAvailableDC(RoutingPolicy):
                         closest_path = path
                         found = True
         return found, closest_dc, closest_path  # returns false and an index out of bounds if no path is available
-
 
 class FarthestAvailableDC(RoutingPolicy):
 
@@ -122,9 +121,9 @@ def get_max_usage(topology: 'Graph', path: 'Path') -> int:
 def get_path_risk(topology: 'Graph', path: 'Path'):
     aecl:float = 0.0
     for i in range(len(path.node_list) - 1):
-        x = topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability']
+        x = topology[path.node_list[i]][path.node_list[i + 1]]['current_failure_probability']
         y = topology[path.node_list[i]][path.node_list[i+1]]['total_units']
-        aecl += topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'] * topology[path.node_list[i]][path.node_list[i+1]]['total_units']
+        aecl += topology[path.node_list[i]][path.node_list[i + 1]]['current_failure_probability'] * topology[path.node_list[i]][path.node_list[i+1]]['total_units']
         #aecl += topology[path.node_list[i]][path.node_list[i+1]]['total_units']
         #print(topology[path.node_list[i]][path.node_list[i + 1]]['link_failure_probability'])
         #print(topology[path.node_list[i]][path.node_list[i + 1]]['total_units'])
@@ -154,7 +153,8 @@ def get_safest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
     aux_list = [0,0,0,0]
     aux_dict = []
     if topology.nodes[service.destination]['available_units'] >= service.computing_units:
-        paths = topology.graph['prob_ksp'][service.source, service.destination]
+        #paths = topology.graph['prob_ksp'][service.source, service.destination]
+        paths = topology.graph['ksp'][service.source, service.destination]
         print(len(paths))
         
         for p in paths:
@@ -167,16 +167,20 @@ def get_safest_path(topology: 'Graph', service: 'Service') -> Optional['Path']:
             aux_list[4] = i
             for j in range(len(path.node_list)-1):
                 for idx, prob in enumerate(prob_list):
-                    if float(topology[path.node_list[j]][path.node_list[j+1]]['link_failure_probability']) == prob:
+                    #TODO: Utilizar o current failure probability
+                    if float(topology[path.node_list[j]][path.node_list[j+1]]['current_failure_probability']) == prob:
                         aux_list[idx]+=1
                 
             aux_dict.append(aux_list)
         aux_dict.sort()
-        if aux_dict != []:
+
+        if len(aux_dict) >0:
+            print(aux_dict)
             safest_path_aux_list = aux_dict[0]
             safest_path = viable_paths[safest_path_aux_list[4]]
         else:
             safest_path = None
+    
         '''
         for path in paths:
             print("get safest path hops")

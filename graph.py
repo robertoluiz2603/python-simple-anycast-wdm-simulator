@@ -152,7 +152,7 @@ def get_dcs(args, topology):
 
     if args.dc_placement == "fixed":  # fixed positions
         #,"Los_Angeles","New_Orleans", "Washington_DC", "El_Paso","Columbus" 
-        dc_nodes = ["Seattle", "San_Francisco",  "Denver",   "Charleston", "Ithaca"]  # list of datacenters
+        dc_nodes = ["Seattle", "San_Francisco",  "Denver",   "Charleston", "Ithaca" ,"Los_Angeles","New_Orleans", "Washington_DC", "El_Paso","Columbus" ]  # list of datacenters
         for node in topology.nodes():  # iterate over all nodes
             if node in dc_nodes:
                 topology.graph['dcs'].append(node)
@@ -182,7 +182,6 @@ def get_ksp(args, topology):
     topology.graph['ksp'] = k_shortest_paths
     return topology
 
-#TODO: Get actual link probability
 def get_probability_ksp(args, topology):
     print("passa ")
     k_shortest_paths = {}
