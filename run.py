@@ -118,11 +118,11 @@ def run(uargs):
                 
                 # if load == 600 and routing_policy == 'CADC':
                 
-                '''
+                
                 core.run_simulation(env_t)
                 print("Ran in debug mode... exiting...")
                 exit(0)
-                '''
+                
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses
     with Pool(processes=uargs.threads) as p:

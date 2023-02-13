@@ -249,7 +249,8 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         Returns:
             bool: _description_
         """
-        
+
+
         #print("chama safest")
         # tries to get a path
         print("entrada>>get_safest_path")
@@ -279,7 +280,8 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
             _type_: _description_
         """
         #success, dc, path = self.env.routing_policy.route(service)#duvida: onde?
-        success, dc, path = self.env.routing_policy.route(service)
+        #TODO: Nova politica de encontrar DC
+        success, dc, path = routing_policies.get_safest_dc(self.env.topology, service)
         if success:
             service.route = path
             print("Realocou")
@@ -297,7 +299,7 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
         #services = sorted(services, key=lambda x: x.class_priority*(x.holding_time - (self.env.current_time - x.arrival_time)))
 
-        print("Length befor", len(services))
+        print("Length before", len(services))
         services = services_sorting(self, services)
 
         """
