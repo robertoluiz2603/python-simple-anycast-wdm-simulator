@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "run.py",
-            "args": ["-tf", "usanw_new.xml", "-t", "1", "-ns", "1", "-a", "10000", "--dc_placement", "fixed", "-k", "10"],
+            "args": ["-tf", "usanw_new_20.xml", "-t", "1", "-ns", "1", "-a", "10000", "--dc_placement", "fixed", "-k", "10"],
             "console": "integratedTerminal",
             "justMyCode": true
         }

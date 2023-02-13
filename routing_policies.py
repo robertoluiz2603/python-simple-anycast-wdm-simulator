@@ -199,30 +199,30 @@ def get_safest_dc(topology: 'Graph', service: 'Service') -> Tuple[bool, str, 'Pa
         """
         Finds the path+DC pair with lowest combined load
         """
-        viable_paths = []
         prob_list = [0.73, 0.15, 0.05, 0]
         aux_list = [0,0,0,0]
         aux_dict = []
         found = False
-        lowest_risk = np.finfo(0.0).max  # initializes load to the maximum value of a float
-        safest_path_risk = [1,0,0,0,0]
+        lowest_risk = [1,0,0,0]
+        safest_path = None
         safest_dc = None
         for iddc, dc in enumerate(topology.graph['dcs']):
             if topology.nodes[dc]['available_units'] >= service.computing_units:
                 paths = topology.graph['ksp'][service.source, dc]
                 for idp, path in enumerate(paths):
-                    aux_list = [0,0,0,0,0]
-                    aux_list[4] = idp
+                    aux_list = [0,0,0,0]
                     for j in range(len(path.node_list)-1):
                         for idx, prob in enumerate(prob_list):
                             if float(topology[path.node_list[j]][path.node_list[j+1]]['current_failure_probability']) == prob:
                                 aux_list[idx]+=1
-                    path_risk = aux_list
+                    risk = aux_list.copy()
                     aux_dict.append(aux_list)
-                    if is_path_viable(topology, path, service.network_units) and path_risk < safest_path_risk:
-                        safest_path_risk=path_risk
+                    if is_path_viable(topology, path, service.network_units) and risk < lowest_risk:
+                        lowest_risk=risk.copy()
                         safest_dc = dc
                         safest_path = path
                         found = True
-        
+                        print("Lowest risk::", lowest_risk)
+                        print("Safest DC::", safest_dc)
+                        print(".")
         return found, safest_dc, safest_path  # returns false and an index out of bounds if no path is available

@@ -280,7 +280,6 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
             _type_: _description_
         """
         #success, dc, path = self.env.routing_policy.route(service)#duvida: onde?
-        #TODO: Nova politica de encontrar DC
         success, dc, path = routing_policies.get_safest_dc(self.env.topology, service)
         if success:
             service.route = path

@@ -34,7 +34,7 @@ def run(uargs):
 
     # in this case, a configuration changes only the load of the network
     #, 'FADC', 'FLB'
-    exec_routing_policies = ['CADC', 'FADC']
+    exec_routing_policies = ['CADC']
     #'PR','DNR','PRCA'
     #exec_restoration_policies = ['PRPA','PRwR']
     exec_restoration_policies = ['PRPA','PRwR']
@@ -118,10 +118,11 @@ def run(uargs):
                 
                 # if load == 600 and routing_policy == 'CADC':
                 
-                
+                '''
                 core.run_simulation(env_t)
                 print("Ran in debug mode... exiting...")
                 exit(0)
+                '''
                 
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses
