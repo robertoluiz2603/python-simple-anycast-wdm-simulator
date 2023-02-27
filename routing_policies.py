@@ -2,6 +2,7 @@ import abc
 import typing
 import numpy as np
 from typing import Tuple, Optional
+import random
 if typing.TYPE_CHECKING:
     from core import Service
     from graph import Path
@@ -41,6 +42,36 @@ class ClosestAvailableDC(RoutingPolicy):
                         closest_dc = dc
                         closest_path = path
                         found = True
+        return found, closest_dc, closest_path  # returns false and an index out of bounds if no path is available
+class RandomAvailableDC(RoutingPolicy):
+
+    def __init__(self):
+        super().__init__()
+        self.name = 'RADC'
+
+    def route(self, service: 'Service') -> Tuple[bool, str, 'Path']:
+        """
+        Finds the closest DC with enough available CPUs and with a path with enough available network resources
+        """
+        found = False
+        closest_path_hops = np.finfo(0.0).max  # initializes load to the maximum value of a float
+        closest_dc = None
+        closest_path = None
+        dc_list  = self.env.topology.graph['dcs'].copy()
+        while(len(dc_list)>0 and found == False):
+            dc = random.choice(dc_list)
+            for d in dc_list:
+                if d == dc:
+                    dc_list.remove(d)
+            if self.env.topology.nodes[dc]['available_units'] >= service.computing_units:
+                paths = self.env.topology.graph['ksp'][service.source, dc]
+                for idp, path in enumerate(paths):
+                    if is_path_viable(self.env.topology, path, service.network_units) and closest_path_hops > path.hops:
+                        closest_path_hops = path.hops
+                        closest_dc = dc
+                        closest_path = path
+                if(closest_path!=None):
+                    found = True
         return found, closest_dc, closest_path  # returns false and an index out of bounds if no path is available
 
 class FarthestAvailableDC(RoutingPolicy):
@@ -216,7 +247,6 @@ def get_safest_dc(topology: 'Graph', service: 'Service') -> Tuple[bool, str, 'Pa
                             if float(topology[path.node_list[j]][path.node_list[j+1]]['current_failure_probability']) == prob:
                                 aux_list[idx]+=1
                     risk = aux_list.copy()
-                    aux_dict.append(aux_list)
                     if is_path_viable(topology, path, service.network_units) and risk < lowest_risk:
                         lowest_risk=risk.copy()
                         safest_dc = dc

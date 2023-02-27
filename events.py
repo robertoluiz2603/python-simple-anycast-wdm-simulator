@@ -21,6 +21,7 @@ def arrival(env: 'Environment', service: 'Service') -> None:
 def departure(env: 'Environment', service: 'Service') -> None:
     # computing the service time that can be later used to compute availability
     service.service_time = env.current_time - service.arrival_time
+    service.service_time = service.service_time - service.downtime 
     service.availability = service.service_time / service.holding_time
     env.release_path(service)
 
@@ -126,6 +127,8 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
 
     # extend the list with the running services
     number_failed_again: int = 0
+    number_failed_first: int = 0
+    number_adjusted_disrupted_services:int = 0
     for link_failure in disaster.links:
         env.logger.debug(f' - Link failed: {link_failure}')
         env.topology[link_failure[0]][link_failure[1]]['failed'] = True
@@ -145,21 +148,45 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
                 failed_service.relocated = False
                 services_disrupted.append(failed_service)
 
-            if failed_service.failed_before:
-                number_failed_again +=1
-            else:
-                failed_service.failed_before = True
-        
+                if failed_service.failed_before:
+                    number_failed_again +=1
+                else:
+                    number_adjusted_disrupted_services+=1
+                    number_failed_first +=1
+                    failed_service.failed_before = True
+
+  
         
         if len(env.topology[link_failure[0]][link_failure[1]]['running_services']) != 0:
             env.logger.critical('Not all services were removed')
 
     #A lista deve ser convertida em um conjunto
     number_disrupted_services = len(services_disrupted)
+
+    this_time_disrupted_services: int=0
+    for serv in services_disrupted:
+        if serv not in env.this_disaster_services:
+            this_time_disrupted_services+=1
+            env.this_disaster_services.append(serv)
     
+    for idx, serv in enumerate(env.this_disaster_services):
+        for service in services_disrupted:
+            if serv == service:
+                service.service_disaster_id = idx
+
     # call the restoration strategy
     services_disrupted = env.restoration_policy.restore(services_disrupted)
- 
+
+    for idx, serv in enumerate(env.this_disaster_services):
+        for service in services_disrupted:
+            if service.service_disaster_id == idx:
+                serv = service
+
+
+    for serv in env.this_disaster_services:
+        if serv.failed == False:
+            env.adjusted_restored+=1
+
     # post-process the services => compute stats
     number_lost_services: int = 0
     number_restored_services: int = 0
@@ -170,15 +197,16 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     number_hops_disrupted = 0
     number_hops_restaured = 0
     number_hops_relocation = 0
+    #for service in services_disrupted:
+    #
     for service in services_disrupted:
         expected_capacity_loss += service.expected_risk
-        if service.failed!=True: 
-             # service could be restored
-
-
+        if service.failed==False: 
+            # service could be restored
             # expected_loss_cost += service.expected_risk * service.priority_class.expected_loss_cost
             expected_loss_cost += service.priority_class.expected_loss_cost
-
+            
+            service.downtime = service.downtime + 18000.0            
             number_restored_services += 1
             # puts the connection back into the network         
             if(service.route != None):
@@ -197,6 +225,23 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
             number_lost_services+=1     
         if(service.route != None):
             number_hops_disrupted += service.route.hops
+
+        if env.epicenter_happened:
+            env.num_failed_epi+=1
+            if service.failed ==False: 
+                env.num_restored_epi+=1
+        elif env.cascade_happened_73:
+            env.num_failed_73+=1
+            if service.failed ==False: 
+                env.num_restored_73+=1
+        elif env.cascade_happened_15:
+            env.num_failed_15+=1
+            if service.failed ==False: 
+                env.num_restored_15+=1
+        elif env.cascade_happened_5:
+            env.num_failed_5+=1
+            if service.failed ==False: 
+                env.num_restored_5+=1
         
     # register statistics such as restorability
     
@@ -204,17 +249,22 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
     if number_disrupted_services > 0:
         restorability = number_restored_services / number_disrupted_services
         env.logger.debug(f'Failure at {env.current_time}\tRestorability: {restorability}')
+
+    env.adjusted_disrupted_services+=this_time_disrupted_services
     env.failed_again_services += number_failed_again
+    env.failed_first += number_failed_first
     env.cascade_affected_services += number_disrupted_services
     env.number_disrupted_services += number_disrupted_services
     env.total_expected_capacity_loss += expected_capacity_loss
     env.total_loss_cost += loss_cost
+    env.total_lost_services+= number_lost_services
     env.total_expected_loss_cost += expected_loss_cost
     env.number_restored_services += number_restored_services
     env.number_relocated_services += number_relocated_services 
     env.total_hops_disrupted_services += number_hops_disrupted
     env.total_hops_restaured_services += number_hops_restaured
     env.total_hops_relocated_services += number_hops_relocation
+
     
     print("AECL: ")
     print(env.total_expected_capacity_loss)  

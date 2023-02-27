@@ -174,11 +174,14 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
         relocated_services = 0
         failed_services = 0
 
+        #service.service_time = self.env.current_time - service.arrival_time
+        #service.availability = service.service_time / service.holding_time
+
         # remaining time = holding time - (current time - arrival time)
         # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
 
-        #services = sorted(services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
-
+        services = sorted(services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        '''
         class1_services = []
         class2_services = []
         
@@ -189,6 +192,7 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
         for s in services:
             print(s.priority_class.priority)
         print("Lista de prioridades")
+        '''
         """
         for s in services:
             if s.priority_class.priority == 1:
@@ -217,6 +221,7 @@ class PathRestorationWithRelocationPolicy(PathRestorationPolicy):
                 restored_services += 1
                 self.env.provision_service(service)
                 service.expected_risk = routing_policies.get_path_risk(self.env.topology, service.route)
+                #service.service_time = self.env.current_time - service.arrival_time
             elif self.relocate_restore_path(service):
                 service.failed = False
                 service.relocated = True
@@ -249,11 +254,10 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         Returns:
             bool: _description_
         """
-
-
+        
         #print("chama safest")
         # tries to get a path
-        print("entrada>>get_safest_path")
+        #print("entrada>>get_safest_path")
         path: Optional['Path'] = routing_policies.get_safest_path(self.env.topology, service) 
         #print("get_safest_path>>saida")
         #path: Optional['Path'] = routing_policies.get_shortest_path(self.env.topology, service)#(juliana alteracao)
@@ -279,8 +283,7 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         Returns:
             _type_: _description_
         """
-        #success, dc, path = self.env.routing_policy.route(service)#duvida: onde?
-        success, dc, path = routing_policies.get_safest_dc(self.env.topology, service)
+        success, dc, path = routing_policies.get_safest_dc(self.env.topology, service)#duvida: onde?
         if success:
             service.route = path
             print("Realocou")
@@ -297,9 +300,9 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
         
         # docs: https://docs.python.org/3.9/howto/sorting.html#key-functions
         #services = sorted(services, key=lambda x: x.class_priority*(x.holding_time - (self.env.current_time - x.arrival_time)))
-
-        print("Length before", len(services))
-        services = services_sorting(self, services)
+        services = sorted(services, key=lambda x: (x.holding_time - (self.env.current_time - x.arrival_time)))
+        
+        #services = services_sorting(self, services)
 
         """
         for s in services:
@@ -328,6 +331,7 @@ class PathRestorationPropabilitiesAware(RestorationPolicy):
             return services
         '''
         for service in services:
+            
             if self.restore_path(service):
                 service.failed = False
                 restored_services += 1

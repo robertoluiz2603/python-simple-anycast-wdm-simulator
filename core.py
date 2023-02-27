@@ -25,7 +25,10 @@ class Environment:
             self.mean_service_holding_time: float = args.mean_service_holding_time
         else:
             self.mean_service_holding_time: float = 86400.0  # service holding time in seconds (54000 sec = 15 h)
-
+        self.this_disaster_services = []
+        self.adjusted_disrupted_services: int = 0
+        self.failed_first:int = 0
+        self.total_lost_services = 0
         self.iter_disaster = -1
         self.total_path_risk = 0.0
         self.total_hops_disrupted_services = 0.0
@@ -44,8 +47,20 @@ class Environment:
         self.total_loss_cost: float = 0
 
         self.total_expected_capacity_loss: float = 0
-        #, 'Z5', 'Z6','Z7','Z8', 'Z9','Z10'
-        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4','Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10', 'Z11', 'Z12', 'Z13', 'Z14','Z15', 'Z16', 'Z17', 'Z18', 'Z19', 'Z20']
+        #10 zonas, 2x (nossa):
+        #'Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6','Z7','Z8', 'Z9','Z10,'Z11', 'Z12', 'Z13', 'Z14','Z15', 'Z16', 'Z17', 'Z18', 'Z19', 'Z20''
+        
+        # topologia 4zonas - Colman 'Z1', 'Z2', 'Z3', 'Z4'
+        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6','Z7','Z8', 'Z9','Z10', 'Z11', 'Z12', 'Z13', 'Z14','Z15', 'Z16', 'Z17', 'Z18', 'Z19', 'Z20']
+
+        self.num_failed_epi:int =0
+        self.num_failed_73:int =0
+        self.num_failed_15:int =0
+        self.num_failed_5:int =0
+        self.num_restored_epi:int =0
+        self.num_restored_73:int =0
+        self.num_restored_15:int =0
+        self.num_restored_5:int =0
         #total number os disaster zones (juliana)
         self.number_disaster_zones: int = len(self.disaster_zones)
         #total number of disaster during a simulation
@@ -58,6 +73,8 @@ class Environment:
         self.number_disrupted_services: int = 0
         # total number of services restored from failures
         self.number_restored_services: int = 0
+
+        self.adjusted_restored: int  = 0
 
         self.number_relocated_services: int =0
         # list with all services processed
@@ -185,7 +202,9 @@ class Environment:
                                         'avg_hops_disrupted_services', 'avg_hops_restaured_services', 'avg_hops_relocated_services',
                                         'avg_restaured_path_risk', 'cascade_affected_services', 'avg_services_affected',
                                         'avg_failed_before_services', 'epicenter_happened', 'cascade_happened_73', 'cascade_happened_15',
-                                        'cascade_happened_5']
+                                        'cascade_happened_5', 'services_restored', 'adjusted_restorability' 'total_failed_epi', 'total_failed_73'
+                                        ,'total_failed_15','total_failed_5', 'total_restored_epi','total_restored_73','total_restored_15',
+                                        'total_restored_5']
         for obs in self.tracked_statistics:
             self.tracked_results[obs] = []
 
@@ -200,7 +219,7 @@ class Environment:
         elif args is not None and hasattr(args, "output_folder"):
             self.output_folder = args.output_folder
 
-        self.plot_formats: tuple = ('pdf', 'svg')  # you can configure this to other formats such as PNG, SVG
+        self.plot_formats: tuple = ('pdf', 'png')  # you can configure this to other formats such as PNG, SVG
 
         self.logger = logging.getLogger(f'env-{self.load}')  # TODO: colocar outras informacoes necessarias
         self.priority_class_list = self.priority_class_inicialization()
@@ -275,6 +294,12 @@ class Environment:
         avg_loss_cost = 0
         avg_expected_loss_cost = 0
         avg_hops_disrupted_services = 0
+        redisrupeted_loss = 0
+        adjusted_restorability = 1
+        #assert self.number_disrupted_services == self.failed_again_services + self.failed_first
+        
+        if(self.failed_again_services >0):
+            redisrupeted_loss = self.total_lost_services/self.failed_again_services
         
         if self.number_disrupted_services >0:
             average_restorability= self.number_restored_services / self.number_disrupted_services
@@ -287,6 +312,9 @@ class Environment:
         if self.number_restored_services > 0:
             avg_hops_restaured_services = self.total_hops_restaured_services/self.number_restored_services
         
+        if self.adjusted_disrupted_services>0:
+            adjusted_restorability = self.adjusted_restored/self.adjusted_disrupted_services
+
         self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'request_blocking_ratio': self.get_request_blocking_ratio(),
             'average_link_usage': np.mean([self.topology[n1][n2]['utilization'] for n1, n2 in self.topology.edges()]),
@@ -302,13 +330,24 @@ class Environment:
             'avg_hops_disrupted_services': avg_hops_disrupted_services,
             'avg_hops_restaured_services': avg_hops_restaured_services,
             'cascade_affected_services': self.cascade_affected_services,
+            'services_restored': self.number_restored_services,
+            'adjusted_restorability': adjusted_restorability,
+            #'re-disrupeted_loss': redisrupeted_loss,
             #'avg_services_affected': self.number_disrupted_services/self.number_disaster_occurences,
             'avg_services_affected': self.number_disrupted_services,
             'avg_failed_before_services': self.failed_again_services,
             'cascade_happened_73': self.cascade_happened_73,
             'cascade_happened_15': self.cascade_happened_15,
             'cascade_happened_5': self.cascade_happened_5,
-            'epicenter_happened': self.epicenter_happened
+            'epicenter_happened': self.epicenter_happened,
+            'total_failed_epi': self.num_failed_epi, 
+            'total_failed_73':self.num_failed_73,
+            'total_failed_15':self.num_failed_15,
+            'total_failed_5':self.num_failed_5,
+            'total_restored_epi':self.num_restored_epi,
+            'total_restored_73':self.num_restored_73,
+            'total_restored_15':self.num_restored_15,
+            'total_restored_5':self.num_restored_5
         })
         
     def is_empty(self, list):
@@ -346,7 +385,20 @@ class Environment:
         return priority_choose
         
     def reset(self, seed=None, id_simulation=None):
-        
+        self.num_failed_epi:int =0
+        self.num_failed_73:int =0
+        self.num_failed_15:int =0
+        self.num_failed_5:int =0
+        self.num_restored_epi:int =0
+        self.num_restored_73:int =0
+        self.num_restored_15:int =0
+        self.num_restored_5:int =0
+        self.this_disaster_services = []
+        self.adjusted_restored: int  = 0
+        self.adjusted_disrupted_services: int = 0
+        self.failed_first:int = 0
+        self.failed_again_services: int =0
+        self.total_lost_services = 0
         self.iter_disaster = -1        
         self.epicenter_happened = 0
         self.cascade_happened_73 = 0
@@ -389,8 +441,6 @@ class Environment:
             self.id_simulation = id_simulation
 
         self.next_disaster_point = self.disaster_epicenter_arrivals_interval
-        #, 'Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10'
-        self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4','Z5', 'Z6', 'Z7', 'Z8', 'Z9', 'Z10', 'Z11', 'Z12', 'Z13', 'Z14','Z15', 'Z16', 'Z17', 'Z18', 'Z19', 'Z20']
         self.repeat_disaster = 1
 
         # (re)-initialize the graph
@@ -409,8 +459,8 @@ class Environment:
             if self.topology.nodes[node]['dc']:
                 #self.topology.nodes[node]['available_units'] = self.topology.degree(node) * self.resource_units_per_link
                 #self.topology.nodes[node]['total_units'] = self.topology.degree(node) * self.resource_units_per_link
-                self.topology.nodes[node]['available_units'] = 1800
-                self.topology.nodes[node]['total_units'] = 1800
+                self.topology.nodes[node]['available_units'] = 1800 #juliana alterou de 1800 para 100000
+                self.topology.nodes[node]['total_units'] = 1800 #juliana
                 #self.topology.nodes[node]['available_units'] = 700
                 #self.topology.nodes[node]['total_units'] = 700
                 self.topology.nodes[node]['services'] = []
@@ -508,7 +558,8 @@ class Environment:
                                source=src, 
                                source_id=src_id,
                                computing_units=random.randint(1, 5), #TODO: use self.rng
-                               priority_class=pc)
+                               priority_class=pc,
+                               service_disaster_id=None)
         #print("==passagem==")                       
          
         #print("self.next_disaster_point ", self.next_disaster_point)
@@ -525,6 +576,8 @@ class Environment:
                 if(self.iter_disaster<len(self.disaster_zones)-1):
                     self.iter_disaster+=1    
                 self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster].copy()
+                self.this_disaster_services = []
+                self.adjusted_restored = 0
 
                 if len(self.aux_disaster_zone)>0:
                     for region in self.aux_disaster_zone:
@@ -663,11 +716,13 @@ class Environment:
     def release_path(self, service):
         # provisioning service at the DC
         self.topology.nodes[service.destination]['available_units'] += service.computing_units
-        self.topology.nodes[service.destination]['running_services'].remove(service)
+        if service in self.topology.nodes[service.destination]['running_services']:
+            self.topology.nodes[service.destination]['running_services'].remove(service)
         self._update_node_stats(service.destination)
         for i in range(len(service.route.node_list) - 1):
             self.topology[service.route.node_list[i]][service.route.node_list[i + 1]]['available_units'] += service.network_units
-            self.topology[service.route.node_list[i]][service.route.node_list[i + 1]]['running_services'].remove(service)
+            if service in self.topology[service.route.node_list[i]][service.route.node_list[i + 1]]['running_services']:
+                self.topology[service.route.node_list[i]][service.route.node_list[i + 1]]['running_services'].remove(service)
             self._update_link_stats(service.route.node_list[i], service.route.node_list[i + 1])
         self._update_network_stats()
 
@@ -720,7 +775,6 @@ class Environment:
                 region_to_fail = self.current_disaster_zone[3].copy()
                 self.current_disaster_zone[3] = []
                 self.cascade_happened_5 = 1
-
             else:
                 region_to_fail = []
                 self.cascade_happened_73 = 0
@@ -839,8 +893,10 @@ class Service:
     holding_time: float
     source: str
     source_id: int
-    priority_class: PriorityClass #It is the priority and the rules used to restore this service
+    priority_class: PriorityClass #It is the priority to restore this service
+    service_disaster_id: int
     expected_risk: float = 0.0
+    downtime: float = field(default=3600.0)
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)

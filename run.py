@@ -33,7 +33,7 @@ def run(uargs):
     logger = logging.getLogger('run')
 
     # in this case, a configuration changes only the load of the network
-    #, 'FADC', 'FLB'
+    # 'RADC', 'FADC', 'FLB'
     exec_routing_policies = ['CADC']
     #'PR','DNR','PRCA'
     #exec_restoration_policies = ['PRPA','PRwR']
@@ -86,8 +86,8 @@ def run(uargs):
 
                 if routing_policy == 'CADC':
                     routing_policy_instance = routing_policies.ClosestAvailableDC()
-                elif routing_policy == 'FADC':
-                    routing_policy_instance = routing_policies.FarthestAvailableDC()
+                elif routing_policy == 'RADC':
+                    routing_policy_instance = routing_policies.RandomAvailableDC()
                 #elif routing_policy == 'FLB':
                 #    routing_policy_instance = routing_policies.FullLoadBalancing()
                 else:
@@ -124,6 +124,8 @@ def run(uargs):
                 exit(0)
                 '''
                 
+                
+
     logger.debug(f'Starting pool of simulators with {uargs.threads} threads')
     # use the code above to keep updating the final plot as the simulation progresses
     with Pool(processes=uargs.threads) as p:
