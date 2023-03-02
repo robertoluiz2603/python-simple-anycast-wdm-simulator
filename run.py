@@ -36,8 +36,8 @@ def run(uargs):
     # 'RADC', 'FADC', 'FLB'
     exec_routing_policies = ['CADC']
     #'PR','DNR','PRCA'
-    #exec_restoration_policies = ['PRPA','PRwR']
-    exec_restoration_policies = ['PRPA','PRwR']
+    #exec_restoration_policies = ['PRPA','PRwR', 'PR_BPA']
+    exec_restoration_policies = ['PRPA','PRwR','PR_BPA']
     loads = [x for x in range(args.min_load, args.max_load + 1, args.load_step)]
     #loads = [x for x in range(args.min_load, args.min_load + 1, args.load_step)]
 
@@ -101,6 +101,8 @@ def run(uargs):
                     restoration_policy_instance = restoration_policies.PathRestorationWithRelocationPolicy()
                 elif restoration_policy == 'PRPA':
                     restoration_policy_instance = restoration_policies.PathRestorationPropabilitiesAware()
+                elif restoration_policy == 'PR_BPA':
+                    restoration_policy_instance = restoration_policies.PathRestorationBalancedPropabilitiesAware()
                 else:
                     raise ValueError('Restoration policy was not configured correctly (value set to {})'.format(restoration_policy))
 
@@ -123,6 +125,8 @@ def run(uargs):
                 print("Ran in debug mode... exiting...")
                 exit(0)
                 '''
+                
+                
                 
                 
 
