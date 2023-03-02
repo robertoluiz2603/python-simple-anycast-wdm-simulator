@@ -301,7 +301,8 @@ def get_balanced_safest_dc(topology: 'Graph', service: 'Service') -> Tuple[bool,
                             if float(topology[path.node_list[j]][path.node_list[j+1]]['current_failure_probability']) == prob:
                                 aux_list[idx]+=1
                                 #f_var = (0.95*((len(path.node_list)-1)/max_hops))+(highest_prob*0.05)
-                                f_var = (0.4*((len(path.node_list)-1)/max_hops))+(0.6*highest_prob)
+                                f_var = (0.75*((len(path.node_list)-1)/max_hops))+(0.25*highest_prob)
+                                #f_var = (((len(path.node_list)-1)/max_hops))+(highest_prob)
                     risk = aux_list.copy()
                     if is_path_viable(topology, path, service.network_units) and f_var < lowest_f_var:
                         lowest_risk=risk.copy()
@@ -361,7 +362,8 @@ def get_balanced_sasfest_path(topology: 'Graph', service: 'Service') -> Optional
                     if float(topology[path.node_list[j]][path.node_list[j+1]]['current_failure_probability']) == prob:
                         aux_list[idx]+=1
             #f_var = (0.95*((len(path.node_list)-1)/max_hops))+(highest_prob*0.05)
-            f_var = (0.4*((len(path.node_list)-1)/max_hops))+(0.6*highest_prob)
+            f_var = (0.75*((len(path.node_list)-1)/max_hops))+(0.25*highest_prob)
+            #f_var = (((len(path.node_list)-1)/max_hops))+(highest_prob)
 
             aux_list[5] = f_var #Saves f variable in index 5 of list
             aux_dict.append(aux_list)

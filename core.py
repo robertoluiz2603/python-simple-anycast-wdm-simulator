@@ -576,6 +576,7 @@ class Environment:
                 if(self.iter_disaster<len(self.disaster_zones)-1):
                     self.iter_disaster+=1    
                 self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster].copy()
+                
                 self.this_disaster_services = []
                 self.adjusted_restored = 0
 
@@ -748,12 +749,16 @@ class Environment:
    # as in the topology file. It tests a link failure odds 
    # of a disaster happening.
     def setup_next_disaster(self):
+        at = None
         self.cascade_affected_services = 0
         if self._processed_arrivals > self.num_arrivals:
             return
         region_to_fail = []
         nodes_to_fail=[]
+
+
         if(self.current_disaster_zone[0]!=[]):
+            at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
             for region in self.current_disaster_zone:
                 for link in region:
                     self.topology[link[0]][link[1]]['current_failure_probability'] = float(link[2])
@@ -761,8 +766,11 @@ class Environment:
             region_to_fail = self.current_disaster_zone[0].copy()
             self.current_disaster_zone[0] = []
             self.epicenter_happened = 1
+
+
         else:
             reg_prob = self.rng.randint(1,100)
+            
             if reg_prob <= 73 and self.current_disaster_zone[1]!=[]:
                 region_to_fail = self.current_disaster_zone[1].copy()
                 self.current_disaster_zone[1] = []
@@ -775,7 +783,9 @@ class Environment:
                 region_to_fail = self.current_disaster_zone[3].copy()
                 self.current_disaster_zone[3] = []
                 self.cascade_happened_5 = 1
-            else:
+
+            #The cascade will not occur
+            else:   
                 region_to_fail = []
                 self.cascade_happened_73 = 0
                 self.cascade_happened_15 = 0
@@ -790,6 +800,7 @@ class Environment:
                     self.current_disaster_zone[1] = []
 
                 return
+            at = self.current_time + 3600.0
 
         links_to_fail = []
 
@@ -801,7 +812,6 @@ class Environment:
             links_to_fail.append(link_src_tgt)
 
         # TODO: avaliar se o tempo entre duas falhas em cascata é o mesmo que o tempo entre desastres
-        at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
 
         duration = self.rng.expovariate(1/self.mean_failure_duration)
 
@@ -812,8 +822,9 @@ class Environment:
       #  print("arrival_time: ", disaster.arrival_time)
       #  input() #paradaVerificacao
 
-        disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
-        self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
+        if at != None:
+            disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
+            self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
 
     def _update_link_stats(self, node1, node2):
         """
@@ -896,7 +907,7 @@ class Service:
     priority_class: PriorityClass #It is the priority to restore this service
     service_disaster_id: int
     expected_risk: float = 0.0
-    downtime: float = field(default=3600.0)
+    downtime: float = field(default=1800.0)
     destination: Optional[str] = field(init=False)
     destination_id: Optional[int] = field(init=False)
     route: Optional[Path] = field(init=False)
