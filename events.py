@@ -165,23 +165,23 @@ def disaster_arrival(env: 'Environment', disaster: 'DisasterFailure') -> None:
 
     this_time_disrupted_services: int=0
     for serv in services_disrupted:
-        if serv not in env.this_disaster_services:
+        if serv.service_disaster_id == None:
             this_time_disrupted_services+=1
             env.this_disaster_services.append(serv)
     
     for idx, serv in enumerate(env.this_disaster_services):
         for service in services_disrupted:
-            if serv == service:
+            if serv.service_disaster_id==None:
                 service.service_disaster_id = idx
+                serv=service
 
     # call the restoration strategy
     services_disrupted = env.restoration_policy.restore(services_disrupted)
 
     for idx, serv in enumerate(env.this_disaster_services):
         for service in services_disrupted:
-            if service.service_disaster_id == idx:
+            if service.service_disaster_id == serv.service_disaster_id:
                 serv = service
-
 
     for serv in env.this_disaster_services:
         if serv.failed == False:

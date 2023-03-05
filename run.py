@@ -36,8 +36,8 @@ def run(uargs):
     # 'RADC', 'FADC', 'FLB'
     exec_routing_policies = ['CADC']
     #'PR','DNR','PRCA'
-    #exec_restoration_policies = ['PRPA','PRwR', 'PR_BPA']
-    exec_restoration_policies = ['PRPA','PRwR','PR_BPA']
+    #exec_restoration_policies = ['PRPA','PRwR','PRPA(α=1)', 'PR_BPA','PRPA(α=0.5)','PRPA(α=0.7)','PRPA(α=0.9)',]
+    exec_restoration_policies = ['PRwR','PRPA(α=1)','PRPA(α=0.5)', 'PRPA(α=0.4)','PRPA(α=0.3)','PRPA(α=0.1)']
     loads = [x for x in range(args.min_load, args.max_load + 1, args.load_step)]
     #loads = [x for x in range(args.min_load, args.min_load + 1, args.load_step)]
 
@@ -86,8 +86,8 @@ def run(uargs):
 
                 if routing_policy == 'CADC':
                     routing_policy_instance = routing_policies.ClosestAvailableDC()
-                elif routing_policy == 'RADC':
-                    routing_policy_instance = routing_policies.RandomAvailableDC()
+                #elif routing_policy == 'RADC':
+                #    routing_policy_instance = routing_policies.RandomAvailableDC()
                 #elif routing_policy == 'FLB':
                 #    routing_policy_instance = routing_policies.FullLoadBalancing()
                 else:
@@ -99,10 +99,17 @@ def run(uargs):
                 #    restoration_policy_instance = restoration_policies.PathRestorationPolicy()
                 if restoration_policy == 'PRwR':
                     restoration_policy_instance = restoration_policies.PathRestorationWithRelocationPolicy()
-                elif restoration_policy == 'PRPA':
+                elif restoration_policy == 'PRPA(α=1)':
                     restoration_policy_instance = restoration_policies.PathRestorationPropabilitiesAware()
-                elif restoration_policy == 'PR_BPA':
+                elif restoration_policy == 'PRPA(α=0.5)':
                     restoration_policy_instance = restoration_policies.PathRestorationBalancedPropabilitiesAware()
+                elif restoration_policy == 'PRPA(α=0.4)':
+                    restoration_policy_instance = restoration_policies.PathRestorationBalancedPropabilitiesAware04()
+                elif restoration_policy == 'PRPA(α=0.3)':
+                    restoration_policy_instance = restoration_policies.PathRestorationBalancedPropabilitiesAware03()
+                elif restoration_policy == 'PRPA(α=0.1)':
+                    restoration_policy_instance = restoration_policies.PathRestorationBalancedPropabilitiesAware01()
+                
                 else:
                     raise ValueError('Restoration policy was not configured correctly (value set to {})'.format(restoration_policy))
 
@@ -120,11 +127,12 @@ def run(uargs):
                 
                 # if load == 600 and routing_policy == 'CADC':
                 
-                '''
+                ''' 
                 core.run_simulation(env_t)
                 print("Ran in debug mode... exiting...")
                 exit(0)
                 '''
+                
                 
                 
                 

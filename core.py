@@ -53,6 +53,7 @@ class Environment:
         # topologia 4zonas - Colman 'Z1', 'Z2', 'Z3', 'Z4'
         self.disaster_zones = ['Z1', 'Z2', 'Z3', 'Z4', 'Z5', 'Z6','Z7','Z8', 'Z9','Z10', 'Z11', 'Z12', 'Z13', 'Z14','Z15', 'Z16', 'Z17', 'Z18', 'Z19', 'Z20']
 
+        self.time_last_cascade:float  = 0.0
         self.num_failed_epi:int =0
         self.num_failed_73:int =0
         self.num_failed_15:int =0
@@ -63,8 +64,8 @@ class Environment:
         self.num_restored_5:int =0
         #total number os disaster zones (juliana)
         self.number_disaster_zones: int = len(self.disaster_zones)
-        #total number of disaster during a simulation
-        self.number_disaster_occurences: int = len(self.disaster_zones) * 4
+        #total number of disaster epicenter during a simulation
+        self.number_disaster_occurences: int = len(self.disaster_zones)
         self.number_disaster_processed: int = 0
         
         self.current_disaster_zone = []
@@ -195,7 +196,7 @@ class Environment:
         self.track_stats_every: int = 200  # frequency at which results are saved
         self.plot_tracked_stats_every: int = 2000  # frequency at which results are plotted
         self.tracked_results: dict = {}
-        self.tracked_statistics: List[str] = ['request_blocking_ratio', 'average_link_usage', 'average_node_usage',
+        self.tracked_statistics: List[str] = ['','request_blocking_ratio', 'average_link_usage', 'average_node_usage',
                                         'average_availability', 'average_restorability', 'link_failure_arrivals', 
                                         'link_failure_departures', 'link_disaster_arrivals', 'link_disaster_departures', 'average_relocation',
                                         'avg_expected_capacity_loss', 'avg_loss_cost', 'avg_expected_loss_cost',
@@ -313,7 +314,7 @@ class Environment:
             avg_hops_restaured_services = self.total_hops_restaured_services/self.number_restored_services
         
         if self.adjusted_disrupted_services>0:
-            adjusted_restorability = self.adjusted_restored/self.adjusted_disrupted_services
+            adjusted_restorability += (self.adjusted_restored/self.adjusted_disrupted_services)/self.number_disaster_processed
 
         self.results[self.routing_policy.name][self.restoration_policy.name][self.load].append({
             'request_blocking_ratio': self.get_request_blocking_ratio(),
@@ -385,6 +386,7 @@ class Environment:
         return priority_choose
         
     def reset(self, seed=None, id_simulation=None):
+        self.time_last_cascade:float  = 0.0
         self.num_failed_epi:int =0
         self.num_failed_73:int =0
         self.num_failed_15:int =0
@@ -570,15 +572,14 @@ class Environment:
         for epic in epic_list:
             if self._processed_arrivals == int(epic):
                 print("DISASTER:: Breakpoint")
+        #Nova condicao de entrada:
+        #Conferir numero de desastres processados sem cascata
         if((self._processed_arrivals == self.next_disaster_point) and self.number_disaster_processed<self.number_disaster_occurences):       
             print("DISASTER:: Atingiu ponto de evento")
             if(self.is_empty(self.current_disaster_zone)):
                 if(self.iter_disaster<len(self.disaster_zones)-1):
                     self.iter_disaster+=1    
                 self.current_disaster_zone = self.disaster_zones_list[self.iter_disaster].copy()
-                
-                self.this_disaster_services = []
-                self.adjusted_restored = 0
 
                 if len(self.aux_disaster_zone)>0:
                     for region in self.aux_disaster_zone:
@@ -597,6 +598,9 @@ class Environment:
             #TODO: rever para não ficar estático (juliana)
             #==estático
             #if next fail is an epicente
+            self.next_disaster_point += self.disaster_epicenter_arrivals_interval
+
+            '''
             print("Arrivals:: ", self._processed_arrivals) 
             if(self.number_disaster_processed%4==0):
                 self.next_disaster_point = int((self.disaster_epicenter_arrivals_interval*((self.number_disaster_processed/4)+1)))
@@ -604,14 +608,17 @@ class Environment:
             else:#if next fail is an cascade
                 self.next_disaster_point += int(self.disaster_epicenter_arrivals_interval/6)
                 print("DISASTER:: Proxima cascata = ", self.next_disaster_point)
-                
+            '''
 
             print("====self._processed_arrivals: ",self._processed_arrivals)
             print("self.number_disaster_processed: ", self.number_disaster_processed)
             print("self.disaster_epicenter_arrivals_interval: ", self.disaster_epicenter_arrivals_interval)
             print("self.disaster_cascade_arrivals_interval: ", self.disaster_cascade_arrivals_interval)
             print("self.next_disaster_point: ",self.next_disaster_point)       
-        
+        if self.time_last_cascade < self.current_time:
+            self.this_disaster_services = []
+            self.adjusted_disrupted_services = 0
+            self.adjusted_restored = 0 
         self.services.append(next_arrival)
         self.add_event(Event(next_arrival.arrival_time, events.arrival, next_arrival))
 
@@ -761,13 +768,93 @@ class Environment:
             at = self.current_time + self.rng.expovariate(1/self.mean_failure_inter_arrival_time)
             for region in self.current_disaster_zone:
                 for link in region:
-                    self.topology[link[0]][link[1]]['current_failure_probability'] = float(link[2])
+                    self.topology[link[0]][link[1]]['current_failure_probability'] = float(link[2]) #index 2 is probability
                     
             region_to_fail = self.current_disaster_zone[0].copy()
-            self.current_disaster_zone[0] = []
             self.epicenter_happened = 1
+            links_to_fail = []
 
+            for link in region_to_fail:
+                link_src_tgt = []
+                for idx, item in enumerate(link):
+                    if idx<2:
+                        link_src_tgt.append(item)
+                links_to_fail.append(link_src_tgt)
 
+            duration = self.rng.expovariate(1/self.mean_failure_duration)
+            self.time_aux_for_next_cascade = (at + duration)#juliana
+            if at != None:
+                disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
+                self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
+            self.current_disaster_zone[0] = []
+
+            #73%
+            reg_prob = self.rng.randint(1,100)
+            at += 3600.0
+            if reg_prob <= 73 and self.current_disaster_zone[1]!=[]:
+                region_to_fail = self.current_disaster_zone[1].copy()
+                self.cascade_happened_73 = 1
+                links_to_fail = []
+
+                for link in region_to_fail:
+                    link_src_tgt = []
+                    for idx, item in enumerate(link):
+                        if idx<2:
+                            link_src_tgt.append(item)
+                    links_to_fail.append(link_src_tgt)
+                duration = self.rng.expovariate(1/self.mean_failure_duration)
+                self.time_aux_for_next_cascade = (at + duration)#juliana
+                if at != None:
+                    disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
+                    self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
+            self.current_disaster_zone[1] = []
+            
+            #15%
+            reg_prob = self.rng.randint(1,100)
+            at += 3600.0
+            if reg_prob <= 15 and self.current_disaster_zone[2]!=[]:
+                region_to_fail = self.current_disaster_zone[2].copy()
+                self.cascade_happened_15 = 1
+                links_to_fail = []
+
+                for link in region_to_fail:
+                    link_src_tgt = []
+                    for idx, item in enumerate(link):
+                        if idx<2:
+                            link_src_tgt.append(item)
+                    links_to_fail.append(link_src_tgt)
+
+                duration = self.rng.expovariate(1/self.mean_failure_duration)
+                self.time_aux_for_next_cascade = (at + duration)#juliana
+                if at != None:
+                    disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
+                    self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
+            self.current_disaster_zone[2] = []
+
+            #5%
+            reg_prob = self.rng.randint(1,100)
+            at += 3600.0
+            if reg_prob <= 5 and self.current_disaster_zone[3]!=[]:
+                region_to_fail = self.current_disaster_zone[3].copy()
+                self.cascade_happened_5 = 1
+                links_to_fail = []
+
+                for link in region_to_fail:
+                    link_src_tgt = []
+                    for idx, item in enumerate(link):
+                        if idx<2:
+                            link_src_tgt.append(item)
+                    links_to_fail.append(link_src_tgt)
+
+                duration = self.rng.expovariate(1/self.mean_failure_duration)
+                self.time_aux_for_next_cascade = (at + duration)#juliana
+                if at != None:
+                    disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
+                    self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
+                    self.time_last_cascade=at+duration
+            self.current_disaster_zone[3] = []
+
+        '''
         else:
             reg_prob = self.rng.randint(1,100)
             
@@ -801,7 +888,8 @@ class Environment:
 
                 return
             at = self.current_time + 3600.0
-
+        '''
+        '''
         links_to_fail = []
 
         for link in region_to_fail:
@@ -810,22 +898,17 @@ class Environment:
                 if idx<2:
                     link_src_tgt.append(item)
             links_to_fail.append(link_src_tgt)
-
+        
         # TODO: avaliar se o tempo entre duas falhas em cascata é o mesmo que o tempo entre desastres
 
         duration = self.rng.expovariate(1/self.mean_failure_duration)
 
         self.time_aux_for_next_cascade = (at + duration)#juliana
-
-      #  print("para verificacao--- current_time: ", self.current_time)
-      #  print("at: ", at)
-      #  print("arrival_time: ", disaster.arrival_time)
-      #  input() #paradaVerificacao
-
+        
         if at != None:
             disaster = DisasterFailure(links_to_fail, nodes_to_fail, at, duration)
             self.add_event(Event(disaster.arrival_time, events.disaster_arrival, disaster))
-
+        '''
     def _update_link_stats(self, node1, node2):
         """
         Updates link statistics following a time-weighted manner.
@@ -905,7 +988,7 @@ class Service:
     source: str
     source_id: int
     priority_class: PriorityClass #It is the priority to restore this service
-    service_disaster_id: int
+    service_disaster_id: int = None
     expected_risk: float = 0.0
     downtime: float = field(default=1800.0)
     destination: Optional[str] = field(init=False)
