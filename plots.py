@@ -132,9 +132,9 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     """
     markers = ['', 'x', 'o', '*','#']
     line_styles = ['-', '--', ':', '-.','-', '--']
-    plt.figure(figsize=(12,10))
+    plt.figure(figsize=(12,6.5))
     #comentado por juliana pq estava com erro
-    plt.subplot(3, 3, 1)
+    plt.subplot(2, 3, 1)
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
             if any(results[routing_policy][restoration_policy][load][x]['request_blocking_ratio'] > 0 for load in results[routing_policy][restoration_policy].keys() for x in range(len(results[routing_policy][restoration_policy][load]))):
@@ -142,7 +142,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                 plt.semilogy([load for load in results[routing_policy][restoration_policy].keys()],
                 [np.mean([results[routing_policy][restoration_policy][load][x]['request_blocking_ratio'] for x in range(len(results[routing_policy][restoration_policy][load]))])
                 for load in results[routing_policy][restoration_policy].keys()], label=f"{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
-    plt.xlabel('Load [Erlang] \n (a)')
+    plt.xlabel('Load [Erlang] \n(a)')
     plt.ylabel('Req. blocking ratio') 
     plt.legend(loc=2)
     '''
@@ -192,6 +192,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. restorability(%)')
     '''
+    '''
     plt.subplot(3, 3, 2)
     has_data = False
     num_routing_policies = len(results.keys())
@@ -207,7 +208,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
     plt.xlabel('Load [Erlang] \n (b)')
     plt.ylabel('Avg. relocation')
-
+    '''
     #Below are measurements related to cascading failures.
 
     '''
@@ -254,7 +255,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Avg. expected loss cost')
     '''
-    plt.subplot(3, 3, 3)
+    plt.subplot(2, 3, 6)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -265,8 +266,8 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 [np.mean([results[routing_policy][restoration_policy][load][x]['avg_hops_restaured_services'] for x in
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
-    plt.xlabel('Load [Erlang] \n (c)')
-    plt.ylabel('Avg. hops restored services')
+    plt.xlabel('Load [Erlang] \n(f)')
+    plt.ylabel('Avg. hops in restoration paths')
 
     '''    
     plt.subplot(3, 2, 4)
@@ -283,7 +284,7 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
     plt.xlabel('Load [Erlang]')
     plt.ylabel('Number_restored_services')
     '''
-    plt.subplot(3, 3, 4)
+    plt.subplot(2, 3, 2)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -294,9 +295,10 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                 [np.mean([results[routing_policy][restoration_policy][load][x]['avg_services_affected'] for x in
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
-    plt.xlabel('Load [Erlang] \n (d)')
-    plt.ylabel('Avg. disrupted services')
-    plt.subplot(3, 3, 5)
+    plt.xlabel('Load [Erlang] \n(b)')
+    plt.ylabel('Avg. number of service disruptions')
+
+    plt.subplot(2, 3, 5)
     has_data = False
     num_routing_policies = len(results.keys())
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -310,9 +312,9 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{restoration_policy}", 
                                 marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
-    plt.xlabel('Load [Erlang] \n (e)')
+    plt.xlabel('Load [Erlang] \n(e)')
     plt.ylabel('Avg. restorability')
-    plt.subplot(3, 3, 6)
+    plt.subplot(2, 3, 4)
     has_data = False
     num_routing_policies = len(results.keys())
     for id_routing_policy, routing_policy in enumerate(results.keys()):
@@ -326,10 +328,10 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{restoration_policy}", 
                                 marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
-    plt.xlabel('Load [Erlang] \n (f)')
+    plt.xlabel('Load [Erlang] \n(d)')
     plt.ylabel('Avg. availability')
     
-    plt.subplot(3, 3, 7)
+    plt.subplot(2, 3, 3)
     has_data = False
     for id_routing_policy, routing_policy in enumerate(results.keys()):
         for id_restoration_policy, restoration_policy in enumerate(results[routing_policy].keys()):
@@ -341,10 +343,9 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
                                         range(len(results[routing_policy][restoration_policy][load]))]) for
                                 load in results[routing_policy][restoration_policy].keys()], label=f"{restoration_policy}", marker=markers[id_routing_policy], ls=line_styles[id_restoration_policy])
 
-    plt.xlabel('Load [Erlang] \n\n\n')
-    plt.ylabel('Avg. Re-disrupted services')
-    if has_data:
-        plt.legend(loc=2)
+    plt.xlabel('Load [Erlang] \n(c)')
+    plt.ylabel('Avg. number of re-disruptions')
+
     '''
     plt.subplot(3,3,8)
     has_data = False
@@ -541,17 +542,18 @@ def plot_final_results(env: 'Environment', results: dict, start_time: datetime.d
 
     if timedelta is None:
         timedelta = datetime.timedelta(seconds=(time.time() - start_time))
-
+    '''
     plt.text(0.01, 0.02, 'Progress: {} out of {} ({:.3f} %) / {}'.format(performed_simulations,
                                                         total_simulations,
                                                         percentage_completed,
                                                         timedelta),
                                                         transform=plt.gcf().transFigure,
                                                         fontsize=rcParams['font.size'] - 4.)
-
+    '''
     if save_file:
         for format in env.plot_formats:
-            plt.savefig('./results/{}/final_results.{}'.format(env.output_folder, format))
+            #plt.savefig('./results/20230304T043804.301920UTC/final_results.{}'.format(env.output_folder, format))
+            plt.savefig('./results/fr.{}'.format(format))
     if show:
         plt.show()
     plt.close()

@@ -87,7 +87,8 @@ class Environment:
         # TODO: implementar obtencao do valor a partir do args
         self.mean_failure_inter_arrival_time: float = 1000. #by juliana
         #self.mean_failure_inter_arrival_time: float = 100000. #original
-        self.mean_failure_duration: float = 86400.0
+        #self.mean_failure_duration: float = 86400.0
+        self.mean_failure_duration: float = 43200.0
         
         self.time_aux_for_next_cascade:float = self.mean_failure_inter_arrival_time#juliana
 
